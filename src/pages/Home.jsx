@@ -11,12 +11,6 @@ const BICONS = {
   'Senior Wellness Basket':'👴','Heart Wellness Basket':'❤️',
 }
 
-function timeGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
-}
 
 export default function Home() {
   const { family } = useAuth()
@@ -27,12 +21,33 @@ export default function Home() {
   const [loading, setLoading]       = useState(true)
 
   useEffect(() => {
+    if (!family) return
+
+    const members = family?.members || []
+    const goals   = [...new Set(members.flatMap(m => m.wellnessGoals || []))]
+
+    // Build basket fetch — filter by each wellness goal and merge results
+    const basketFetches = goals.length > 0
+      ? goals.map(g => api.getBaskets({ goal: g }).catch(() => ({ baskets: [] })))
+      : [api.getBaskets({ featured: 'true' }).catch(() => ({ baskets: [] }))]
+
     Promise.all([
-      api.getBaskets({ featured: 'true' }),
+      Promise.all(basketFetches),
       family?._id ? api.getOrders(family._id).catch(() => ({ orders: [] })) : { orders: [] },
       family?._id ? api.getSubscriptions(family._id).catch(() => ({ subscriptions: [] })) : { subscriptions: [] },
-    ]).then(([b, o, s]) => {
-      setBaskets(b.baskets?.slice(0, 4) || [])
+    ]).then(([basketResults, o, s]) => {
+      // Merge all basket results, deduplicate by _id, cap at 4
+      const seen = new Set()
+      const merged = []
+      for (const r of basketResults) {
+        for (const b of (r.baskets || [])) {
+          if (!seen.has(b._id?.toString())) {
+            seen.add(b._id?.toString())
+            merged.push(b)
+          }
+        }
+      }
+      setBaskets(merged.slice(0, 4))
       setRecentOrder(o.orders?.[0] || null)
       setActiveSub(s.subscriptions?.find(x => x.status === 'active') || null)
     }).finally(() => setLoading(false))
@@ -50,9 +65,9 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src={logo} alt="KP" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'contain', background: 'rgba(255,255,255,0.1)' }} />
             <div>
-              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11 }}>{timeGreeting()} 🌿</div>
-              <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 18, fontWeight: 700, marginTop: 1 }}>
-                {family?.familyName || 'Welcome!'}
+              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 500, letterSpacing: 0.2 }}>Welcome to Krisha Pure</div>
+              <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                Eat Pure. Live Well. 🌿
               </div>
             </div>
           </div>
@@ -103,8 +118,8 @@ export default function Home() {
             </div>
             <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 8 }}>Based on your family's goals →</div>
           </div>
-          {/* Shopping cart instead of basket */}
-          <div style={{ fontSize: 52 }}>🛒</div>
+          {/* Produce basket illustration */}
+          <div style={{ fontSize: 52, filter:'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }}>🧺</div>
         </div>
       </div>
 
@@ -138,8 +153,8 @@ export default function Home() {
                   key={b._id}
                   onClick={() => nav('/basket-detail', { state: { basket: b } })}
                   style={{ background: '#fff', borderRadius: 14, padding: '14px', border: '1px solid var(--border)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}>
-                  {/* Shopping cart icon */}
-                  <div style={{ fontSize: 30, marginBottom: 8 }}>🛒</div>
+                  {/* Basket icon */}
+                  <div style={{ fontSize: 30, marginBottom: 8 }}>🧺</div>
                   <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 4 }}>{b.basketName}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 8, lineHeight: 1.4 }}>{b.description}</div>
                   {b.wellnessGoal && (

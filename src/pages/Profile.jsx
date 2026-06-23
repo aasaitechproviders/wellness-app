@@ -125,7 +125,7 @@ export default function Profile() {
                   <div className="input-group">
                     <label className="input-label">Gender</label>
                     <select className="input-field" value={newMember.gender} onChange={e => setNewMember(p => ({ ...p, gender: e.target.value }))}>
-                      <option>Female</option><option>Male</option><option>Child</option>
+                      <option>Female</option><option>Male</option>
                     </select>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function Profile() {
                       <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--green-pale)', border: '2px solid var(--green-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden', position: 'relative' }}>
                         {photo
                           ? <img src={photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <span>{m.gender === 'Male' ? '👨' : m.gender === 'Child' ? '👶' : '👩'}</span>
+                          : <span>{m.gender === 'Male' ? '👨' : '👩'}</span>
                         }
                         {/* Camera overlay */}
                         <div style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>📷</div>

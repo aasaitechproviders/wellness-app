@@ -86,7 +86,7 @@ export default function Recommend() {
           <div key={b._id} style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
             {/* Visual — shopping cart */}
             <div style={{ width: '100%', height: 120, background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 58 }}>
-              🛒
+              🧺
             </div>
 
             <div style={{ padding: '14px 16px' }}>
@@ -140,7 +140,7 @@ export default function Recommend() {
         {/* No baskets fallback */}
         {(!result.baskets || result.baskets.length === 0) && (
           <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', padding: '28px', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🧺</div>
             <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Your Basket is Ready</div>
             <p style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 16 }}>We've found the best wellness produce for your goals</p>
             <button className="btn btn-primary" onClick={() => nav('/plans', { state: { result } })}>

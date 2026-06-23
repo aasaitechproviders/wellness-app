@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 import { showToast } from '../components/Toast'
@@ -25,8 +25,8 @@ const HEALTH_CHALLENGES = [
   'Frequent Illness','Obesity','Underweight','Constipation','Poor Appetite','Cholesterol','None',
 ]
 
-const DISLIKED_VEG = ['Bitter Gourd','Brinjal','Radish','Turnip','Raw Papaya','Pumpkin']
-const DISLIKED_FRU = ['Banana','Mango','Grapes','Pineapple']
+const DISLIKED_VEG = ['Bitter Gourd','Brinjal','Radish','Turnip','Raw Papaya','Pumpkin','Drumstick','Cluster Beans','French Beans','Raw Banana','Raw Mango','Colocasia (Arbi)','Snake Gourd','Ridge Gourd','Ash Gourd']
+const DISLIKED_FRU = ['Banana','Mango','Grapes','Pineapple','Papaya','Jackfruit','Custard Apple','Dates','Chikoo (Sapota)']
 const TASTE_PREFS  = ['Sweet','Mild','Tangy','Spicy','Bitter']
 const COOK_PREFS   = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
 const MICROGREEN_TYPES = ['Sunflower','Broccoli','Pea Shoots','Radish','Mustard','Mixed Microgreens']
@@ -61,7 +61,26 @@ function lifeStageFromAge(age) {
   if (a <= 12)  return 'Child'
   if (a <= 19)  return 'Teen'
   if (a <= 59)  return 'Adult'
-  return 'Senior Citizen'
+  return 'Adult'
+}
+
+// Returns recommended weight range string based on height (cm)
+function recommendedWeightRange(height) {
+  if (!height) return null
+  const hm = parseFloat(height) / 100
+  if (hm <= 0) return null
+  const low  = Math.round(18.5 * hm * hm)
+  const high = Math.round(24.9 * hm * hm)
+  return `${low} – ${high} kg`
+}
+
+function bmiColor(bmi) {
+  if (!bmi) return 'var(--green)'
+  const b = parseFloat(bmi)
+  if (b < 18.5) return '#E67E22'
+  if (b < 25)   return '#27AE60'
+  if (b < 30)   return '#E67E22'
+  return '#E74C3C'
 }
 
 const RELATIONSHIPS = ['Self','Spouse','Child','Parent','Grandparent']
@@ -76,6 +95,7 @@ function emptyMember() {
     wellnessGoals: [],
     healthChallenges: [],
     dietType: 'Vegetarian',
+    hasVegFruitRestriction: null,   // null = unanswered, true = yes, false = no
     dislikedVeg: [], dislikedFruit: [],
     tastePref: [], cookPref: [],
     microgreenExperience: 'New User',
@@ -85,14 +105,20 @@ function emptyMember() {
 }
 
 export default function Setup() {
-  const { updateFamily } = useAuth()
+  const { family, updateFamily } = useAuth()
   const nav = useNavigate()
-  const [step, setStep]   = useState(0)
+  const location = useLocation()
+  const isEditMode = !!family?.profileComplete   // true when coming from Profile → Edit
+
+  const [step, setStep]     = useState(0)
   const [saving, setSaving] = useState(false)
+  const [prefillLoading, setPrefillLoading] = useState(isEditMode)
 
   // Step 0: profile
   const [profile, setProfile] = useState({
-    familyName: '', email: '',
+    email: '',
+    deliveryType: 'individual',
+    apartmentId: '',
     apartmentName: '', towerNo: '', flatNo: '', landmark: '', pincode: '',
     city: 'Coimbatore',
     deliveryPreference: 'Morning',
@@ -100,7 +126,66 @@ export default function Setup() {
 
   // Steps 1-3: members
   const [members, setMembers] = useState([emptyMember()])
-  const [activeMember, setActiveMember] = useState(0)  // which member to edit in steps 1-3
+  const [activeMember, setActiveMember] = useState(0)
+
+  // ── Pre-fill from DB when in edit mode ──────────────────────────────────
+  useEffect(() => {
+    if (!isEditMode || !family?._id) { setPrefillLoading(false); return }
+
+    api.getFamily(family._id).then(d => {
+      const f = d.family
+      if (!f) return
+
+      // Detect delivery type: if apartmentId is set it was gated, else individual
+      const deliveryType = f.apartmentId ? 'gated' : 'individual'
+
+      // Parse landmark and pincode back out of address string (stored as "landmark, pincode")
+      const addrParts = (f.address || '').split(',').map(s => s.trim())
+      const pincode   = addrParts.find(p => /^\d{6}$/.test(p)) || ''
+      const landmark  = addrParts.filter(p => p !== pincode).join(', ')
+
+      setProfile({
+        email:              f.email || '',
+        deliveryType,
+        apartmentId:        f.apartmentId || '',
+        apartmentName:      f.apartmentName || '',
+        towerNo:            f.towerNo || '',
+        flatNo:             f.flatNo || '',
+        landmark:           deliveryType === 'individual' ? landmark : '',
+        pincode:            deliveryType === 'individual' ? pincode  : '',
+        city:               f.city || 'Coimbatore',
+        deliveryPreference: f.deliveryPreference || 'Morning',
+      })
+
+      // Pre-fill members from DB — map DB member shape to local emptyMember shape
+      if (f.members?.length) {
+        const prefilled = f.members.map(m => {
+          // Parse dietaryRestrictions back to dislikedVeg / dislikedFruit / allergies
+          const restrictions = m.dietaryRestrictions || []
+          const dislikedVeg  = restrictions.filter(r => r.startsWith('No ') && DISLIKED_VEG.includes(r.slice(3))).map(r => r.slice(3))
+          const dislikedFruit= restrictions.filter(r => r.startsWith('No ') && DISLIKED_FRU.includes(r.slice(3))).map(r => r.slice(3))
+          const allergies    = restrictions.filter(r => !r.startsWith('No ') || (!DISLIKED_VEG.includes(r.slice(3)) && !DISLIKED_FRU.includes(r.slice(3))))
+
+          return {
+            ...emptyMember(),
+            _existingId:    m.memberId,   // flag to know this already exists in DB
+            name:           m.name || '',
+            age:            m.age?.toString() || '',
+            gender:         m.gender || 'Female',
+            wellnessGoals:  m.wellnessGoals || [],
+            dietaryRestrictions: restrictions,
+            dislikedVeg,
+            dislikedFruit,
+            hasVegFruitRestriction: (dislikedVeg.length + dislikedFruit.length) > 0 ? true : null,
+            allergies:      allergies.length ? allergies : [],
+            dietType:       f.dietPreference || 'Vegetarian',
+          }
+        })
+        setMembers(prefilled)
+      }
+    }).catch(() => {}).finally(() => setPrefillLoading(false))
+  }, [isEditMode, family?._id])
+
 
   const sf = (f, v) => setProfile(p => ({ ...p, [f]: v }))
   const smf = (f, v) => setMembers(m => m.map((x, i) => i === activeMember ? { ...x, [f]: v } : x))
@@ -126,10 +211,18 @@ export default function Setup() {
 
   const validateStep = () => {
     if (step === 0) {
-      if (!profile.familyName) return 'Full Name is required'
-      if (!profile.apartmentName) return 'Apartment Name is required'
-      if (!profile.flatNo) return 'Flat Number is required'
-      if (!profile.pincode || profile.pincode.length < 6) return 'Valid Pincode is required'
+      if (!profile.city) return 'Please select a city'
+      if (!profile.deliveryType) return 'Please select a delivery location type'
+      if (profile.deliveryType === 'individual') {
+        if (!profile.apartmentName) return 'Apartment / Building Name is required'
+        if (!profile.flatNo) return 'Flat Number is required'
+        if (!profile.landmark) return 'Landmark / Street is required'
+        if (!profile.pincode || profile.pincode.length < 6) return 'Valid Pincode is required'
+      }
+      if (profile.deliveryType === 'gated') {
+        if (!profile.apartmentName) return 'Please select an apartment or wellness partner'
+        if (!profile.flatNo) return 'Flat Number is required'
+      }
     }
     if (step === 1) {
       for (const m of members) {
@@ -143,8 +236,17 @@ export default function Setup() {
         if (m.wellnessGoals.length > 3) return `${m.name}: Maximum 3 wellness goals allowed`
       }
     }
+    if (step === 3) {
+      const missing = members.filter(m => !m.preferredPlan)
+      if (missing.length === members.length) return 'Please select a preferred subscription plan'
+      if (missing.length > 0) return `Please select a preferred plan for: ${missing.map(m => m.name || 'a member').join(', ')}`
+    }
     return null
   }
+
+  // Get Started is disabled on step 3 until every member has a preferredPlan
+  const allPlansSelected = members.every(m => !!m.preferredPlan)
+  const ctaDisabled = saving || (step === STEPS.length - 1 && !allPlansSelected)
 
   const next = async () => {
     const err = validateStep()
@@ -159,34 +261,87 @@ export default function Setup() {
     // Final submit
     setSaving(true)
     try {
-      const reg = await api.registerFamily({
-        familyName:    profile.familyName,
-        email:         profile.email || undefined,
-        apartmentName: profile.apartmentName,
-        towerNo:       profile.towerNo || undefined,
-        flatNo:        profile.flatNo,
-        address:       [profile.landmark, profile.pincode].filter(Boolean).join(', ') || profile.apartmentName,
-        city:          profile.city,
-        dietPreference: members[0]?.dietType || 'Vegetarian',
-      })
-      updateFamily(reg.family)
-
-      for (const m of members) {
-        await api.addMember(reg.family._id, {
-          name:          m.name,
-          age:           parseInt(m.age) || null,
-          gender:        m.gender,
-          wellnessGoals: m.wellnessGoals,
-          dietaryRestrictions: [
-            ...m.dislikedVeg.map(v => `No ${v}`),
-            ...m.dislikedFruit.map(v => `No ${v}`),
-            ...m.allergies.filter(a => a !== 'None'),
-          ],
+      if (isEditMode && family?._id) {
+        // ── EDIT MODE: update existing family ──────────────────────────────
+        const updated = await api.updateFamily(family._id, {
+          apartmentId:    profile.apartmentId || undefined,
+          apartmentName:  profile.apartmentName,
+          towerNo:        profile.towerNo || undefined,
+          flatNo:         profile.flatNo,
+          address:        profile.deliveryType === 'individual'
+            ? [profile.landmark, profile.pincode].filter(Boolean).join(', ')
+            : profile.apartmentName,
+          city:           profile.city,
+          dietPreference: members[0]?.dietType || 'Vegetarian',
         })
-      }
+        updateFamily(updated.family)
 
-      showToast('Profile saved! 🎉', 'success')
-      nav('/home', { replace: true })
+        // Update each existing member; add any new ones
+        for (const m of members) {
+          if (m._existingId) {
+            await api.updateMember(family._id, m._existingId, {
+              name:          m.name,
+              age:           parseInt(m.age) || null,
+              gender:        m.gender,
+              wellnessGoals: m.wellnessGoals,
+              dietaryRestrictions: [
+                ...m.dislikedVeg.map(v => `No ${v}`),
+                ...m.dislikedFruit.map(v => `No ${v}`),
+                ...m.allergies.filter(a => a !== 'None'),
+              ],
+            })
+          } else {
+            await api.addMember(family._id, {
+              name:          m.name,
+              age:           parseInt(m.age) || null,
+              gender:        m.gender,
+              wellnessGoals: m.wellnessGoals,
+              dietaryRestrictions: [
+                ...m.dislikedVeg.map(v => `No ${v}`),
+                ...m.dislikedFruit.map(v => `No ${v}`),
+                ...m.allergies.filter(a => a !== 'None'),
+              ],
+            })
+          }
+        }
+
+        showToast('Profile updated! ✓', 'success')
+        nav('/profile', { replace: true })
+
+      } else {
+        // ── NEW REGISTRATION ───────────────────────────────────────────────
+        const reg = await api.registerFamily({
+          familyName:    `Family-${localStorage.getItem('kp_phone') || 'User'}`,
+          email:         profile.email || undefined,
+          apartmentId:   profile.apartmentId || undefined,
+          apartmentName: profile.apartmentName,
+          towerNo:       profile.towerNo || undefined,
+          flatNo:        profile.flatNo,
+          address:       profile.deliveryType === 'individual'
+            ? [profile.landmark, profile.pincode].filter(Boolean).join(', ')
+            : profile.apartmentName,
+          city:          profile.city,
+          dietPreference: members[0]?.dietType || 'Vegetarian',
+        })
+        updateFamily(reg.family)
+
+        for (const m of members) {
+          await api.addMember(reg.family._id, {
+            name:          m.name,
+            age:           parseInt(m.age) || null,
+            gender:        m.gender,
+            wellnessGoals: m.wellnessGoals,
+            dietaryRestrictions: [
+              ...m.dislikedVeg.map(v => `No ${v}`),
+              ...m.dislikedFruit.map(v => `No ${v}`),
+              ...m.allergies.filter(a => a !== 'None'),
+            ],
+          })
+        }
+
+        showToast('Profile saved! 🎉', 'success')
+        nav('/home', { replace: true })
+      }
     } catch(e) {
       showToast(e.message || 'Setup failed', 'error')
     } finally {
@@ -196,14 +351,25 @@ export default function Setup() {
 
   return (
     <div className="page-no-nav" style={{ minHeight:'100dvh', display:'flex', flexDirection:'column', background:'var(--cream)' }}>
+
+      {/* Prefill loading overlay */}
+      {prefillLoading && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(255,255,255,0.92)', zIndex:100, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14 }}>
+          <div className="spinner" style={{ width:36, height:36 }} />
+          <div style={{ fontSize:14, color:'var(--text-light)' }}>Loading your profile…</div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background:'var(--green)', padding:'20px 20px 20px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-          {step > 0 && (
-            <button onClick={() => setStep(s => s - 1)} style={{ width:34, height:34, borderRadius:'50%', background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>←</button>
+          {(step > 0 || isEditMode) && (
+            <button onClick={() => step > 0 ? setStep(s => s - 1) : nav('/profile')} style={{ width:34, height:34, borderRadius:'50%', background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>←</button>
           )}
           <div>
-            <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>Step {step+1} of {STEPS.length}</div>
+            <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>
+              {isEditMode ? 'Edit Profile' : `Step ${step+1} of ${STEPS.length}`}
+            </div>
             <div style={{ color:'#fff', fontFamily:'Playfair Display,serif', fontSize:19, fontWeight:600 }}>{STEPS[step]}</div>
           </div>
         </div>
@@ -222,9 +388,21 @@ export default function Setup() {
 
       {/* CTA */}
       <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'14px 20px 28px', background:'var(--white)', borderTop:'1px solid var(--border)' }}>
-        <button className="btn btn-primary" onClick={next} disabled={saving}>
+        {step === STEPS.length - 1 && !allPlansSelected && !isEditMode && (
+          <div style={{ fontSize:12, color:'var(--text-light)', textAlign:'center', marginBottom:8 }}>
+            {members.length > 1
+              ? `Select a preferred plan for all ${members.length} members to continue`
+              : 'Select a preferred subscription plan to continue'}
+          </div>
+        )}
+        <button className="btn btn-primary" onClick={next} disabled={isEditMode ? saving : ctaDisabled}>
           {saving && <span className="spinner" style={{width:18,height:18,borderWidth:2}}/>}
-          {saving ? 'Saving...' : (step < STEPS.length - 1 ? 'Save & Continue →' : 'Get Started 🎉')}
+          {saving
+            ? 'Saving...'
+            : step < STEPS.length - 1
+              ? 'Save & Continue →'
+              : isEditMode ? 'Save Changes ✓' : 'Get Started 🎉'
+          }
         </button>
       </div>
     </div>
@@ -233,60 +411,201 @@ export default function Setup() {
 
 // ─── STEP 0: Personal & Delivery ─────────────────────────────────────────────
 function Step0({ p, sf }) {
+  const [apts, setApts]       = useState([])
+  const [aptSearch, setAptSearch] = useState('')
+  const [aptOpen, setAptOpen] = useState(false)
+  const [aptLoading, setAptLoading] = useState(false)
+
+  // Load apartments when Gated Community is selected
+  useEffect(() => {
+    if (p.deliveryType !== 'gated') return
+    if (apts.length) return
+    setAptLoading(true)
+    api.getApartments(p.city)
+      .then(d => setApts(d.apartments || []))
+      .catch(() => {})
+      .finally(() => setAptLoading(false))
+  }, [p.deliveryType, p.city])
+
+  // Reload apartments when city changes (gated mode)
+  useEffect(() => {
+    if (p.deliveryType !== 'gated') return
+    setApts([])
+    setAptLoading(true)
+    api.getApartments(p.city)
+      .then(d => setApts(d.apartments || []))
+      .catch(() => {})
+      .finally(() => setAptLoading(false))
+  }, [p.city])
+
+  const filteredApts = apts.filter(a =>
+    a.apartmentName?.toLowerCase().includes(aptSearch.toLowerCase())
+  )
+
+  const selectApt = (apt) => {
+    sf('apartmentName', apt.apartmentName)
+    sf('apartmentId',   apt.apartmentId || apt._id?.toString() || '')
+    sf('city',          apt.city || p.city)
+    setAptOpen(false)
+    setAptSearch('')
+  }
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      <SectionTitle>Primary Customer</SectionTitle>
-      <Field label="Full Name *">
-        <input className="input-field" placeholder="e.g. Priya Sharma" value={p.familyName} onChange={e => sf('familyName', e.target.value)} />
-      </Field>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        <Field label="Mobile Number">
-          <input className="input-field" value={localStorage.getItem('kp_phone') || ''} readOnly style={{ background:'#f5f5f5' }} />
-        </Field>
-        <Field label="Email Address">
-          <input className="input-field" type="email" placeholder="priya@email.com" value={p.email} onChange={e => sf('email', e.target.value)} />
-        </Field>
+    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+      {/* City */}
+      <div>
+        <SectionTitle>City</SectionTitle>
+        <div style={{ display:'flex', gap:10, marginTop:10 }}>
+          {['Coimbatore','Chennai'].map(c => (
+            <div key={c} onClick={() => sf('city', c)} style={{ flex:1, display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+              <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                {p.city===c && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+              </div>
+              <span style={{ fontWeight:600, fontSize:14, color:p.city===c?'var(--green)':'var(--text)' }}>{c}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <SectionTitle style={{ marginTop:8 }}>Address</SectionTitle>
-      <Field label="City *">
-        <select className="input-field" value={p.city} onChange={e => sf('city', e.target.value)}>
-          <option>Coimbatore</option>
-          <option>Chennai</option>
-        </select>
-      </Field>
-      <Field label="Apartment Name *">
-        <input className="input-field" placeholder="e.g. Green Meadows" value={p.apartmentName} onChange={e => sf('apartmentName', e.target.value)} />
-      </Field>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        <Field label="Tower / Block">
-          <input className="input-field" placeholder="Block A" value={p.towerNo} onChange={e => sf('towerNo', e.target.value)} />
-        </Field>
-        <Field label="Flat Number *">
-          <input className="input-field" placeholder="B-101" value={p.flatNo} onChange={e => sf('flatNo', e.target.value)} />
-        </Field>
+      {/* Delivery type toggle */}
+      <div>
+        <SectionTitle>Delivery Location Type</SectionTitle>
+        <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:10 }}>
+          {[
+            { id:'individual', icon:'🏠', label:'Individual Home', sub:'Enter your home address manually' },
+            { id:'gated',      icon:'🏘️', label:'Gated Community / Wellness Partner', sub:'Select from our registered apartments' },
+          ].map(({ id, icon, label, sub }) => (
+            <div key={id} onClick={() => { sf('deliveryType', id); sf('apartmentName',''); sf('apartmentId','') }} style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 14px', borderRadius:12, border:`1.5px solid ${p.deliveryType===id?'var(--green)':'var(--border)'}`, background:p.deliveryType===id?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+              <span style={{ fontSize:24 }}>{icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:14, color:p.deliveryType===id?'var(--green)':'var(--text)' }}>{label}</div>
+                <div style={{ fontSize:12, color:'var(--text-light)', marginTop:1 }}>{sub}</div>
+              </div>
+              <div style={{ width:18, height:18, borderRadius:'50%', border:`2px solid ${p.deliveryType===id?'var(--green)':'var(--border)'}`, background:p.deliveryType===id?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                {p.deliveryType===id && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }}/>}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <Field label="Landmark">
-        <input className="input-field" placeholder="Near metro / temple" value={p.landmark} onChange={e => sf('landmark', e.target.value)} />
-      </Field>
-      <Field label="Pincode *">
-        <input className="input-field" type="tel" inputMode="numeric" maxLength={6} placeholder="641001" value={p.pincode} onChange={e => sf('pincode', e.target.value.replace(/\D/g,''))} />
-      </Field>
 
-      <SectionTitle style={{ marginTop:8 }}>Delivery Preference</SectionTitle>
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {[['Morning','7 AM – 10 AM','🌅'],['Afternoon','10 AM – 1 PM','☀️'],['Evening','4 PM – 7 PM','🌆']].map(([id, time, icon]) => (
-          <div key={id} onClick={() => sf('deliveryPreference', id)} style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 14px', borderRadius:12, border:`1.5px solid ${p.deliveryPreference===id?'var(--green)':'var(--border)'}`, background:p.deliveryPreference===id?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
-            <span style={{ fontSize:22 }}>{icon}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:600, fontSize:14, color:p.deliveryPreference===id?'var(--green)':'var(--text)' }}>{id}</div>
-              <div style={{ fontSize:12, color:'var(--text-light)', marginTop:1 }}>{time}</div>
-            </div>
-            <div style={{ width:18, height:18, borderRadius:'50%', border:`2px solid ${p.deliveryPreference===id?'var(--green)':'var(--border)'}`, background:p.deliveryPreference===id?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {p.deliveryPreference===id && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }}/>}
-            </div>
+      {/* ── INDIVIDUAL HOME fields ── */}
+      {p.deliveryType === 'individual' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <SectionTitle>Address</SectionTitle>
+          <Field label="Apartment / Building Name *">
+            <input className="input-field" placeholder="e.g. Green Meadows Apartments" value={p.apartmentName} onChange={e => sf('apartmentName', e.target.value)} />
+          </Field>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <Field label="Tower / Block">
+              <input className="input-field" placeholder="Block A" value={p.towerNo} onChange={e => sf('towerNo', e.target.value)} />
+            </Field>
+            <Field label="Flat Number *">
+              <input className="input-field" placeholder="B-101" value={p.flatNo} onChange={e => sf('flatNo', e.target.value)} />
+            </Field>
           </div>
-        ))}
+          <Field label="Landmark / Street *">
+            <input className="input-field" placeholder="Near metro / temple, Anna Nagar" value={p.landmark} onChange={e => sf('landmark', e.target.value)} />
+          </Field>
+          <Field label="Pincode *">
+            <input className="input-field" type="tel" inputMode="numeric" maxLength={6} placeholder="641001" value={p.pincode} onChange={e => sf('pincode', e.target.value.replace(/\D/g,''))} />
+          </Field>
+        </div>
+      )}
+
+      {/* ── GATED COMMUNITY fields ── */}
+      {p.deliveryType === 'gated' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <SectionTitle>Select Apartment / Wellness Partner</SectionTitle>
+
+          {/* Searchable dropdown trigger */}
+          <div style={{ position:'relative' }}>
+            <div
+              onClick={() => setAptOpen(o => !o)}
+              style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 14px', border:`1.5px solid ${p.apartmentName?'var(--green)':'var(--border)'}`, borderRadius:12, background:p.apartmentName?'var(--green-pale)':'#fff', cursor:'pointer', minHeight:48 }}
+            >
+              <div style={{ flex:1, minWidth:0 }}>
+                {p.apartmentName
+                  ? <span style={{ fontWeight:600, fontSize:14, color:'var(--green)' }}>{p.apartmentName}</span>
+                  : <span style={{ fontSize:14, color:'var(--text-light)' }}>Search apartment or wellness partner…</span>
+                }
+              </div>
+              <span style={{ fontSize:16, color:'var(--text-light)', flexShrink:0, marginLeft:8 }}>{aptOpen ? '▲' : '▼'}</span>
+            </div>
+
+            {aptOpen && (
+              <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, right:0, background:'#fff', border:'1.5px solid var(--green-muted)', borderRadius:14, zIndex:50, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', overflow:'hidden' }}>
+                {/* Search box */}
+                <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--border)' }}>
+                  <input
+                    autoFocus
+                    className="input-field"
+                    style={{ marginBottom:0 }}
+                    placeholder="🔍  Type to search…"
+                    value={aptSearch}
+                    onChange={e => setAptSearch(e.target.value)}
+                  />
+                </div>
+
+                {/* List */}
+                <div style={{ maxHeight:220, overflowY:'auto' }}>
+                  {aptLoading ? (
+                    <div style={{ padding:'20px', textAlign:'center' }}>
+                      <div className="spinner" style={{ width:24, height:24, margin:'0 auto' }} />
+                    </div>
+                  ) : filteredApts.length === 0 ? (
+                    <div style={{ padding:'16px', textAlign:'center', fontSize:13, color:'var(--text-light)' }}>
+                      {apts.length === 0 ? 'No registered apartments found for this city' : 'No results match your search'}
+                    </div>
+                  ) : filteredApts.map((apt, i) => (
+                    <div
+                      key={apt._id || i}
+                      onClick={() => selectApt(apt)}
+                      style={{ padding:'12px 14px', borderBottom: i < filteredApts.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer', background: p.apartmentName === apt.apartmentName ? 'var(--green-pale)' : '#fff', transition:'background 0.1s' }}
+                    >
+                      <div style={{ fontWeight:600, fontSize:14, color: p.apartmentName === apt.apartmentName ? 'var(--green)' : 'var(--text)' }}>{apt.apartmentName}</div>
+                      {apt.city && <div style={{ fontSize:12, color:'var(--text-light)', marginTop:2 }}>{apt.city}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Flat details after apartment is selected */}
+          {p.apartmentName && (
+            <>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Tower / Block">
+                  <input className="input-field" placeholder="Block A" value={p.towerNo} onChange={e => sf('towerNo', e.target.value)} />
+                </Field>
+                <Field label="Flat Number *">
+                  <input className="input-field" placeholder="B-101" value={p.flatNo} onChange={e => sf('flatNo', e.target.value)} />
+                </Field>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Delivery Preference */}
+      <div>
+        <SectionTitle>Delivery Preference</SectionTitle>
+        <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
+          {[['Morning','7 AM – 10 AM','🌅'],['Afternoon','10 AM – 1 PM','☀️'],['Evening','4 PM – 7 PM','🌆']].map(([id, time, icon]) => (
+            <div key={id} onClick={() => sf('deliveryPreference', id)} style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 14px', borderRadius:12, border:`1.5px solid ${p.deliveryPreference===id?'var(--green)':'var(--border)'}`, background:p.deliveryPreference===id?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+              <span style={{ fontSize:22 }}>{icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:14, color:p.deliveryPreference===id?'var(--green)':'var(--text)' }}>{id}</div>
+                <div style={{ fontSize:12, color:'var(--text-light)', marginTop:1 }}>{time}</div>
+              </div>
+              <div style={{ width:18, height:18, borderRadius:'50%', border:`2px solid ${p.deliveryPreference===id?'var(--green)':'var(--border)'}`, background:p.deliveryPreference===id?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {p.deliveryPreference===id && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }}/>}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -314,7 +633,7 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
       <div className="member-card">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div className="member-avatar">{m.gender==='Male'?'👨':m.gender==='Child'?'👶':'👩'}</div>
+            <div className="member-avatar">{m.gender==='Male'?'👨':'👩'}</div>
             <span style={{ fontWeight:600, fontSize:14 }}>Member {active+1}</span>
           </div>
           {members.length > 1 && (
@@ -338,7 +657,7 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <Field label="Gender">
               <select className="input-field" value={m.gender} onChange={e => smf('gender', e.target.value)}>
-                <option>Female</option><option>Male</option><option>Child</option>
+                <option>Female</option><option>Male</option>
               </select>
             </Field>
             <Field label="Age (1–110)">
@@ -357,17 +676,26 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
 
           {/* BMI display */}
           {(() => {
-            const bmi = calcBMI(m.height, m.weight)
+            const bmi      = calcBMI(m.height, m.weight)
+            const recRange = recommendedWeightRange(m.height)
+            const color    = bmiColor(bmi)
             return bmi ? (
-              <div style={{ background:'var(--green-pale)', borderRadius:10, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div>
-                  <div style={{ fontSize:11, color:'var(--text-light)', fontWeight:600, textTransform:'uppercase' }}>BMI</div>
-                  <div style={{ fontWeight:700, fontSize:20, color:'var(--green)', fontFamily:'Playfair Display,serif' }}>{bmi}</div>
+              <div style={{ background:'var(--green-pale)', borderRadius:12, padding:'12px 14px' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: recRange ? 10 : 0 }}>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-light)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>BMI</div>
+                    <div style={{ fontWeight:700, fontSize:22, color, fontFamily:'Playfair Display,serif', marginTop:2 }}>{bmi}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <span style={{ background: color, color:'#fff', padding:'4px 12px', borderRadius:50, fontSize:12, fontWeight:700 }}>{bmiCategory(bmi)}</span>
+                  </div>
                 </div>
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:12, color:'var(--text-mid)' }}>{bmiCategory(bmi)}</div>
-                  {m.age && <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>Life Stage: {lifeStageFromAge(m.age)}</div>}
-                </div>
+                {recRange && (
+                  <div style={{ borderTop:'1px solid rgba(45,106,53,0.15)', paddingTop:8, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ fontSize:11, color:'var(--text-light)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>Recommended Weight</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{recRange}</div>
+                  </div>
+                )}
               </div>
             ) : null
           })()}
@@ -467,6 +795,15 @@ function Step2({ members, active, setActive, smfToggle }) {
 // ─── STEP 3: Food Preferences ─────────────────────────────────────────────────
 function Step3({ members, active, setActive, smf, smfToggle }) {
   const m = members[active]
+  const [plans, setPlans]           = useState([])
+  const [plansLoading, setPlansLoading] = useState(true)
+
+  useEffect(() => {
+    api.getPlans()
+      .then(d => setPlans(d.plans || []))
+      .catch(() => {})
+      .finally(() => setPlansLoading(false))
+  }, [])
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
@@ -485,7 +822,7 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
       <div>
         <SectionTitle>Diet Type</SectionTitle>
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
-          {['Vegetarian','Eggetarian','Non-Vegetarian','Vegan'].map(dt => (
+          {['Vegetarian','Eggetarian','Non-Vegetarian'].map(dt => (
             <div key={dt} onClick={() => smf('dietType', dt)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${m?.dietType===dt?'var(--green)':'var(--border)'}`, background:m?.dietType===dt?'var(--green-pale)':'#fff', cursor:'pointer' }}>
               <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${m?.dietType===dt?'var(--green)':'var(--border)'}`, background:m?.dietType===dt?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                 {m?.dietType===dt && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
@@ -496,27 +833,92 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
         </div>
       </div>
 
-      {/* Disliked vegetables */}
+      {/* Vegetable / Fruit Restriction gate */}
       <div>
-        <SectionTitle>Disliked Vegetables</SectionTitle>
-        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>These will be avoided in your basket</div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-          {DISLIKED_VEG.map(v => {
-            const sel = m?.dislikedVeg?.includes(v) || false
-            return <ToggleChip key={v} label={v} selected={sel} onToggle={() => smfToggle('dislikedVeg', v)} />
+        <SectionTitle>Vegetable / Fruit Restrictions</SectionTitle>
+        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:12, marginTop:4 }}>
+          Do you have any vegetable or fruit restrictions?
+        </div>
+        <div style={{ display:'flex', gap:10, marginBottom:16 }}>
+          {[['yes', 'Yes, I have restrictions', true], ['no', 'No restrictions', false]].map(([val, label, boolVal]) => {
+            const sel = m?.hasVegFruitRestriction === boolVal
+            return (
+              <div key={val} onClick={() => {
+                smf('hasVegFruitRestriction', boolVal)
+                if (!boolVal) {
+                  smf('dislikedVeg', [])
+                  smf('dislikedFruit', [])
+                }
+              }} style={{ flex:1, display:'flex', alignItems:'center', gap:10, padding:'11px 13px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+                <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  {sel && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+                </div>
+                <span style={{ fontSize:13, fontWeight:sel?600:400, color:sel?'var(--green)':'var(--text)', lineHeight:1.3 }}>{label}</span>
+              </div>
+            )
           })}
         </div>
-      </div>
 
-      {/* Disliked fruits */}
-      <div>
-        <SectionTitle>Fruit Restrictions</SectionTitle>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-          {DISLIKED_FRU.map(f => {
-            const sel = m?.dislikedFruit?.includes(f) || false
-            return <ToggleChip key={f} label={`Avoid ${f}`} selected={sel} onToggle={() => smfToggle('dislikedFruit', f)} />
-          })}
-        </div>
+        {/* Only show lists when user says Yes */}
+        {m?.hasVegFruitRestriction === true && (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+            {/* Disliked Vegetables */}
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid var(--border)', overflow:'hidden' }}>
+              <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--border)', background:'var(--cream)' }}>
+                <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>Disliked Vegetables</div>
+                <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>Select items to avoid — these will be excluded from your basket</div>
+              </div>
+              <div style={{ padding:'8px 0' }}>
+                {DISLIKED_VEG.map((v, i) => {
+                  const sel = m?.dislikedVeg?.includes(v) || false
+                  return (
+                    <div key={v} onClick={() => smfToggle('dislikedVeg', v)} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderBottom: i < DISLIKED_VEG.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer', background: sel ? 'var(--green-pale)' : '#fff', transition:'background 0.1s' }}>
+                      <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
+                        {sel && <span style={{ color:'#fff', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize:14, fontWeight:sel?600:400, color:sel?'var(--green)':'var(--text)' }}>{v}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              {(m?.dislikedVeg?.length > 0) && (
+                <div style={{ padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--green-pale)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>{m.dislikedVeg.length} vegetable{m.dislikedVeg.length > 1 ? 's' : ''} to avoid</span>
+                  <button onClick={e => { e.stopPropagation(); smf('dislikedVeg', []) }} style={{ fontSize:11, color:'var(--text-light)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Clear</button>
+                </div>
+              )}
+            </div>
+
+            {/* Fruit Restrictions */}
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid var(--border)', overflow:'hidden' }}>
+              <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--border)', background:'var(--cream)' }}>
+                <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>Fruit Restrictions</div>
+                <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>Select fruits to avoid</div>
+              </div>
+              <div style={{ padding:'8px 0' }}>
+                {DISLIKED_FRU.map((f, i) => {
+                  const sel = m?.dislikedFruit?.includes(f) || false
+                  return (
+                    <div key={f} onClick={() => smfToggle('dislikedFruit', f)} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderBottom: i < DISLIKED_FRU.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer', background: sel ? 'var(--green-pale)' : '#fff', transition:'background 0.1s' }}>
+                      <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
+                        {sel && <span style={{ color:'#fff', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize:14, fontWeight:sel?600:400, color:sel?'var(--green)':'var(--text)' }}>Avoid {f}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              {(m?.dislikedFruit?.length > 0) && (
+                <div style={{ padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--green-pale)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>{m.dislikedFruit.length} fruit{m.dislikedFruit.length > 1 ? 's' : ''} to avoid</span>
+                  <button onClick={e => { e.stopPropagation(); smf('dislikedFruit', []) }} style={{ fontSize:11, color:'var(--text-light)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Clear</button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
       </div>
 
       {/* Taste profile */}
@@ -574,22 +976,41 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
       <div>
         <SectionTitle>Preferred Plan</SectionTitle>
         <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>We'll suggest the right subscription for you</div>
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {[['One-Time Trial','Try before subscribing'],['Daily','Fresh produce every day'],['Alternate Days','Every other day'],['Weekly Wellness Basket','Our most popular plan'],['Twice Weekly','Twice a week delivery'],['Monthly Wellness Subscription','Best value plan']].map(([id, sub]) => {
-            const sel = m?.preferredPlan === id
-            return (
-              <div key={id} onClick={() => smf('preferredPlan', id)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer' }}>
-                <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  {sel && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+        {plansLoading ? (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 0' }}>
+            <div className="spinner" style={{ width:24, height:24 }} />
+          </div>
+        ) : plans.length === 0 ? (
+          <div style={{ fontSize:13, color:'var(--text-light)', padding:'12px 0' }}>No plans available at the moment</div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {plans.map(plan => {
+              const sel = m?.preferredPlan === plan.planId
+              const durationLabel = plan.duration === 1 ? 'Daily'
+                : plan.duration === 7  ? '7 Days'
+                : plan.duration === 15 ? '15 Days'
+                : plan.duration === 30 ? '30 Days'
+                : `${plan.duration} Days`
+              return (
+                <div key={plan.planId} onClick={() => smf('preferredPlan', plan.planId)} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+                  <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {sel && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:13, color:sel?'var(--green)':'var(--text)' }}>{plan.planName}</div>
+                    <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>{plan.description || durationLabel}</div>
+                  </div>
+                  {plan.price && (
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:sel?'var(--green)':'var(--text)', fontFamily:'Playfair Display,serif' }}>₹{plan.price}</div>
+                      {plan.duration && <div style={{ fontSize:10, color:'var(--text-light)', marginTop:1 }}>{durationLabel}</div>}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div style={{ fontWeight:600, fontSize:13, color:sel?'var(--green)':'var(--text)' }}>{id}</div>
-                  <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>{sub}</div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Budget */}

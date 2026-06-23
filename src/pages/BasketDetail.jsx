@@ -101,7 +101,7 @@ export default function BasketDetail() {
   )
   if (!basket) return (
     <div className="page-full center" style={{ minHeight: '100dvh', flexDirection: 'column', gap: 16 }}>
-      <div style={{ fontSize: 52 }}>🛒</div>
+      <div style={{ fontSize: 52 }}>🧺</div>
       <p>No basket selected</p>
       <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ width: 180 }}>Browse →</button>
     </div>
@@ -140,7 +140,7 @@ export default function BasketDetail() {
 
               {/* Cart visual */}
               <div style={{ width: '100%', height: 130, background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62, marginBottom: 14 }}>
-                🛒
+                🧺
               </div>
 
               {basket.targetNutrients?.length > 0 && (
