@@ -105,7 +105,7 @@ export default function Goals() {
                     fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
                     cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s',
                   }}>
-                  <span>{m.gender === 'Male' ? '👨' : m.gender === 'Child' ? '👶' : '👩'}</span>
+                  <span>{m.gender === 'Male' ? '👨' : '👩'}</span>
                   {m.name}
                   {cnt > 0 && (
                     <span style={{
