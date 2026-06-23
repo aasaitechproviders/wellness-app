@@ -15,6 +15,7 @@ import Schedule     from './pages/Schedule'
 import Confirmed    from './pages/Confirmed'
 import { Orders, OrderDetail } from './pages/Orders'
 import Profile      from './pages/Profile'
+import Cart         from './pages/Cart'
 
 function Guard({ children }) {
   const { family, loading } = useAuth()
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/orders"        element={<Guard><Orders /></Guard>} />
         <Route path="/orders/:id"    element={<Guard><OrderDetail /></Guard>} />
         <Route path="/profile"       element={<Guard><Profile /></Guard>} />
+        <Route path="/cart"          element={<Guard><Cart /></Guard>} />
         <Route path="*"              element={<Navigate to="/" replace />} />
       </Routes>
     </div>

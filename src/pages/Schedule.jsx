@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import { api } from '../api'
 import { showToast } from '../components/Toast'
 
@@ -14,6 +15,7 @@ export default function Schedule() {
   const nav = useNavigate()
   const { state } = useLocation()
   const { family } = useAuth()
+  const { clearCart } = useCart()
   const [day, setDay]   = useState(null)
   const [slot, setSlot] = useState(null)
   const [going, setGoing] = useState(false)
@@ -24,27 +26,42 @@ export default function Schedule() {
     if(!slot) return showToast('Select a time slot','error')
     setGoing(true)
     try {
-      const { basket, plan, items=[] } = state||{}
-      // Subscribe if plan available
-      if(plan?.dbPlanId||plan?.planId){
+      const { basket, baskets=[], plan, items=[], totalAmount, multiBasket } = state||{}
+
+      // For multi-basket: place one order with merged items from all baskets
+      const allBaskets   = multiBasket && baskets.length ? baskets : (basket ? [basket] : [])
+      const primaryBasket = allBaskets[0] || basket
+      const mergedItems  = multiBasket
+        ? allBaskets.flatMap(b => (b.ingredientNames||[]).map(n => ({ name:n, quantity:1, unit:'serving' })))
+        : items.length
+          ? items.map(it=>({name:it.name,quantity:it.qty||1,unit:'g'}))
+          : (primaryBasket?.ingredientNames||[]).map(n=>({name:n,quantity:1,unit:'serving'}))
+
+      const orderTotal = totalAmount || primaryBasket?.price || plan?.price || 699
+
+      // Subscribe if plan available (single basket only)
+      if(!multiBasket && (plan?.dbPlanId||plan?.planId)){
         await api.subscribe({
           planId: plan.dbPlanId||plan.planId,
-          basketId: basket?.basketId||null,
+          basketId: primaryBasket?.basketId||null,
           deliveryDay: day.toLocaleDateString('en',{weekday:'long'}),
           deliverySlot: slot, startDate: day.toISOString(),
         }).catch(()=>{})
       }
+
       const order = await api.placeOrder({
-        basketId: basket?.basketId||null,
-        items: items.length
-          ? items.map(it=>({name:it.name,quantity:it.qty,unit:'g'}))
-          : (basket?.ingredientNames||[]).map(n=>({name:n,quantity:1,unit:'serving'})),
+        basketId: !multiBasket ? (primaryBasket?.basketId||null) : null,
+        items: mergedItems,
         deliveryDate: day.toISOString(),
         deliverySlot: slot,
-        totalAmount: basket?.price||plan?.price||699,
+        totalAmount: orderTotal,
         paymentMethod: 'UPI',
       })
-      nav('/confirmed',{ state:{ order:order.order, basket, plan }, replace:true })
+
+      // Clear cart after successful order
+      if(multiBasket) clearCart()
+
+      nav('/confirmed',{ state:{ order:order.order, basket: primaryBasket, baskets: allBaskets, plan, multiBasket }, replace:true })
     } catch(e){ showToast(e.message||'Failed to place order','error')
     } finally { setGoing(false) }
   }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import { api } from '../api'
 import BottomNav from '../components/BottomNav'
+import { showToast } from '../components/Toast'
 import logo from '../assets/logo.jpeg'
 
 const BICONS = {
@@ -14,6 +16,7 @@ const BICONS = {
 
 export default function Home() {
   const { family } = useAuth()
+  const { addToCart, isInCart } = useCart()
   const nav = useNavigate()
   const [baskets, setBaskets]       = useState([])
   const [recentOrder, setRecentOrder] = useState(null)
@@ -151,8 +154,7 @@ export default function Home() {
               {baskets.map(b => (
                 <div
                   key={b._id}
-                  onClick={() => nav('/basket-detail', { state: { basket: b } })}
-                  style={{ background: '#fff', borderRadius: 14, padding: '14px', border: '1px solid var(--border)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}>
+                  style={{ background: '#fff', borderRadius: 14, padding: '14px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
                   {/* Basket icon */}
                   <div style={{ fontSize: 30, marginBottom: 8 }}>🧺</div>
                   <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 4 }}>{b.basketName}</div>
@@ -160,7 +162,18 @@ export default function Home() {
                   {b.wellnessGoal && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--green-pale)', color: 'var(--green)', padding: '2px 8px', borderRadius: 50, fontSize: 10, fontWeight: 600, marginBottom: 8 }}>✓ {b.wellnessGoal}</div>
                   )}
-                  <div style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, color: 'var(--green)', fontSize: 16 }}>₹{b.price}</div>
+                  <div style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, color: 'var(--green)', fontSize: 16, marginBottom: 10 }}>₹{b.price}</div>
+                  {/* Add to Cart button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (isInCart(b._id)) { nav('/cart'); return }
+                      addToCart(b)
+                      showToast(`${b.basketName} added to cart 🛒`, 'success')
+                    }}
+                    style={{ width: '100%', padding: '8px 0', background: isInCart(b._id) ? 'var(--green-pale)' : 'var(--green)', color: isInCart(b._id) ? 'var(--green)' : '#fff', border: isInCart(b._id) ? '1.5px solid var(--green)' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 'auto', transition: 'all 0.15s' }}>
+                    {isInCart(b._id) ? '✓ Added — View Cart' : '🛒 Add to Cart'}
+                  </button>
                 </div>
               ))}
             </div>

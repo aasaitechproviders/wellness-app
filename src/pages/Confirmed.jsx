@@ -4,7 +4,8 @@ import logo from '../assets/logo.jpeg'
 export default function Confirmed() {
   const nav = useNavigate()
   const { state } = useLocation()
-  const { order, basket, plan } = state || {}
+  const { order, basket, baskets=[], plan, multiBasket } = state || {}
+  const allBaskets = multiBasket && baskets.length ? baskets : (basket ? [basket] : [])
 
   return (
     <div className="page-full fade-in" style={{
@@ -34,7 +35,15 @@ export default function Confirmed() {
             <span style={{ fontWeight: 700, fontSize: 13 }}>{order.orderNo}</span>
             <span className="pill pill-placed">Placed</span>
           </div>
-          {basket && <Row label={basket.basketName || 'Wellness Basket'} value={`₹${basket.price || order.totalAmount}`} bold />}
+          {allBaskets.length > 1
+            ? allBaskets.map((b, i) => (
+                <Row key={i} label={b.basketName || 'Wellness Basket'} value={`₹${b.price}`} bold={i === 0} />
+              ))
+            : allBaskets[0] && <Row label={allBaskets[0].basketName || 'Wellness Basket'} value={`₹${allBaskets[0].price || order.totalAmount}`} bold />
+          }
+          {allBaskets.length > 1 && (
+            <Row label="Total" value={`₹${order.totalAmount}`} bold />
+          )}
           {plan    && <Row label="Plan" value={plan.name || plan.planName} />}
           {order.deliveryDate && <Row label="Delivery" value={new Date(order.deliveryDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} />}
           {order.deliverySlot && <Row label="Time" value={order.deliverySlot} />}

@@ -6,21 +6,25 @@ export default function ReviewOrder() {
   const nav = useNavigate()
   const { state } = useLocation()
   const { family } = useAuth()
-  const basket = state?.basket
-  const items  = state?.items || []
-  const plan   = state?.plan
 
-  if (!basket && !plan) return (
+  const multiBasket = state?.multiBasket || false
+  const baskets     = state?.baskets || (state?.basket ? [state.basket] : [])
+  const basket      = state?.basket   // single basket (legacy / customised)
+  const items       = state?.items || []
+  const plan        = state?.plan
+
+  if (baskets.length === 0 && !plan) return (
     <div className="page-full center" style={{ minHeight:'100dvh', flexDirection:'column', gap:16 }}>
       <div style={{ fontSize:48 }}>📋</div><p>Nothing to review</p>
       <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ width:160 }}>Start →</button>
     </div>
   )
 
-  // Use basket price as total (already includes extras calculated in BasketDetail)
-  const total = basket?.price || plan?.price || 699
+  // Total: sum of all basket prices
+  const total = multiBasket
+    ? baskets.reduce((sum, b) => sum + (b.price || 0), 0)
+    : (basket?.price || plan?.price || 699)
 
-  // Calculate per-item prices using shared calcItemPrice (same as BasketDetail)
   const itemsWithPrice = items.map(it => ({
     ...it,
     linePrice: calcItemPrice(it.name, (it.weight || 200) * (it.qty || 1))
@@ -35,23 +39,40 @@ export default function ReviewOrder() {
 
       <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:12 }}>
 
-        {/* Basket label */}
-        {basket && (
-          <div style={{ background:'var(--green-pale)', borderRadius:10, padding:'10px 14px', fontWeight:600, fontSize:14, color:'var(--green)', display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ fontSize:22 }}>🛒</span>
-            {basket.basketName} {items.length > 0 && items.length !== basket.ingredientNames?.length ? '(Customized)' : ''}
+        {/* Multi-basket summary */}
+        {multiBasket ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {baskets.map((b, i) => (
+              <div key={i} style={{ background:'var(--green-pale)', borderRadius:10, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:20 }}>🧺</span>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:13, color:'var(--green)' }}>{b.basketName}</div>
+                    {b.wellnessGoal && <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>✓ {b.wellnessGoal}</div>}
+                  </div>
+                </div>
+                <div style={{ fontWeight:700, fontSize:14, color:'var(--green)', fontFamily:'Playfair Display,serif' }}>₹{b.price}</div>
+              </div>
+            ))}
           </div>
+        ) : (
+          basket && (
+            <div style={{ background:'var(--green-pale)', borderRadius:10, padding:'10px 14px', fontWeight:600, fontSize:14, color:'var(--green)', display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:22 }}>🧺</span>
+              {basket.basketName} {items.length > 0 && items.length !== basket.ingredientNames?.length ? '(Customized)' : ''}
+            </div>
+          )
         )}
 
         {/* Quick summary */}
         <div className="card">
-          <SRow label="Items"        value={`${items.length || basket?.ingredientNames?.length || 0} items`} />
-          <SRow label="Plan"         value={plan?.name || plan?.planName || 'Weekly Plan'} />
+          <SRow label="Baskets"      value={`${baskets.length} basket${baskets.length > 1 ? 's' : ''}`} />
+          {plan && <SRow label="Plan" value={plan?.name || plan?.planName || 'Weekly Plan'} />}
           <SRow label="Delivery Day" value="To be scheduled" />
         </div>
 
-        {/* Items list */}
-        {items.length > 0 && (
+        {/* Items list — only for single basket with custom items */}
+        {!multiBasket && itemsWithPrice.length > 0 && (
           <div className="card">
             <div style={{ fontWeight:600, fontSize:14, marginBottom:12 }}>Order Items</div>
             {itemsWithPrice.map((it, i) => (
@@ -86,6 +107,17 @@ export default function ReviewOrder() {
 
         {/* Total */}
         <div className="card">
+          {multiBasket && (
+            <>
+              {baskets.map((b, i) => (
+                <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                  <span style={{ fontSize:13, color:'var(--text-mid)' }}>{b.basketName}</span>
+                  <span style={{ fontSize:13, fontWeight:600 }}>₹{b.price}</span>
+                </div>
+              ))}
+              <div style={{ height:1, background:'var(--border)', margin:'8px 0 12px' }} />
+            </>
+          )}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <span style={{ fontWeight:700, fontSize:15 }}>Total Amount</span>
             <span style={{ fontFamily:'Playfair Display,serif', fontSize:28, fontWeight:700, color:'var(--green)' }}>₹{total}</span>
@@ -97,7 +129,9 @@ export default function ReviewOrder() {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, marginBottom:9 }}>
           <span>🔒</span><span style={{ fontSize:12, color:'var(--text-light)' }}>100% Secure Payments</span>
         </div>
-        <button className="btn btn-primary" onClick={() => nav('/schedule', { state })}>Place Order →</button>
+        <button className="btn btn-primary" onClick={() => nav('/schedule', { state: { ...state, totalAmount: total, baskets, basket: baskets[0] } })}>
+          Place Order →
+        </button>
       </div>
     </div>
   )
