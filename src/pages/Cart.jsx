@@ -63,10 +63,10 @@ export default function Cart() {
     : []
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', minHeight:'100dvh', background:'var(--cream)' }}>
+    <div className="page-shell">
 
       {/* ── STICKY HEADER ── */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:'#fff', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10, padding:'14px 18px 12px', flexShrink:0 }}>
+      <div style={{ background:'#fff', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10, padding:'14px 18px 12px', flexShrink:0 }}>
         <button className="back-btn" onClick={() => nav('/home')}>←</button>
         <div style={{ fontFamily:'var(--font-head)', fontSize:17, fontWeight:600, flex:1 }}>My Cart</div>
         {cartCount > 0 && (
@@ -78,7 +78,7 @@ export default function Cart() {
       </div>
 
       {/* ── SCROLLABLE CONTENT ── */}
-      <div style={{ flex:1, overflowY:'auto', padding:'16px 18px', paddingBottom: cartCount > 0 ? 140 : 80 }}>
+      <div className="page-shell-scroll" style={{ padding:'16px 18px 24px' }}>
 
         {cartCount === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'60vh', gap:16, textAlign:'center' }}>
@@ -222,7 +222,7 @@ export default function Cart() {
 
       {/* ── FIXED FOOTER CTA ── */}
       {cartCount > 0 && (
-        <div style={{ position:'sticky', bottom:0, zIndex:40, background:'#fff', borderTop:'1px solid var(--border)', padding:'12px 18px', paddingBottom:'calc(12px + env(safe-area-inset-bottom))' }}>
+        <div className="sticky-footer" style={{ paddingBottom:'calc(var(--nav-h) + 12px)' }}>
           <button className="btn btn-primary" onClick={handleCheckout}>
             Proceed to Order → ₹{cartTotal}
           </button>

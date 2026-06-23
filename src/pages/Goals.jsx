@@ -72,12 +72,13 @@ export default function Goals() {
   const total = Object.values(local).flat().length
 
   return (
-    <div className="page fade-in">
+    <div className="page-shell fade-in">
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav('/home')}>←</button>
         <div className="top-bar-title">Select Wellness Goals</div>
       </div>
 
+      <div className="page-shell-scroll">
       <div style={{ padding: '12px 18px 4px' }}>
         <p style={{ fontSize: 13, color: 'var(--text-light)' }}>
           Choose up to <strong>3 goals</strong> per family member
@@ -121,7 +122,7 @@ export default function Goals() {
       )}
 
       {/* Goal grid — styled exactly like Image 11 */}
-      <div style={{ padding: '4px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, paddingBottom: 130 }}>
+      <div style={{ padding: '4px 18px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {goals.map(g => {
           const meta     = GM[g.goalName] || { icon: '🌿', color: '#E8F5E9' }
           const sel      = curG.includes(g.goalId)
@@ -175,6 +176,8 @@ export default function Goals() {
           )
         })}
       </div>
+
+      </div>{/* end page-shell-scroll */}
 
       {/* Sticky footer CTA — above bottom nav */}
       {members.length > 0 && (

@@ -60,10 +60,10 @@ export default function Home() {
   const goals   = [...new Set(members.flatMap(m => m.wellnessGoals || []))]
 
   return (
-    <div className="page fade-in" style={{ background: 'var(--cream)' }}>
+    <div className="page-shell fade-in">
 
       {/* ── Header ─────────────────────────────────────── */}
-      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '18px 18px 20px', position: 'sticky', top: 0, zIndex: 50 }}>
+      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '18px 18px 20px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src={logo} alt="KP" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'contain', background: 'rgba(255,255,255,0.1)' }} />
@@ -97,6 +97,9 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* ── Scrollable content ─────────────────────────── */}
+      <div className="page-shell-scroll with-nav">
 
       {/* ── Active subscription banner ─────────────────── */}
       {activeSub && (
@@ -207,6 +210,8 @@ export default function Home() {
           are intentionally REMOVED per client request. Users reach setup via /goals flow. */}
 
       <div style={{ height: 24 }} />
+      </div>{/* end page-shell-scroll */}
+
       <BottomNav />
     </div>
   )

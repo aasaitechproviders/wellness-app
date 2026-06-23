@@ -20,57 +20,60 @@ export function Orders() {
   }, [family])
 
   return (
-    <div className="page fade-in">
+    <div className="page-shell fade-in">
       <div className="top-bar">
         <div className="top-bar-title">My Orders</div>
       </div>
 
-      {loading ? (
-        <div className="loading-center"><div className="spinner" /></div>
-      ) : orders.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📦</div>
-          <h3>No Orders Yet</h3>
-          <p>Your wellness basket orders will appear here</p>
-          <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ marginTop:8, width:'auto', padding:'12px 24px' }}>
-            Get a Basket →
-          </button>
-        </div>
-      ) : (
-        <div style={{ padding:'0 20px' }}>
-          {orders.map(order => (
-            <div key={order._id} className="card" onClick={() => nav(`/orders/${order._id}`)}
-              style={{ marginBottom:12, cursor:'pointer' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14 }}>{order.orderNo}</div>
-                  <div style={{ fontSize:12, color:'var(--text-light)', marginTop:2 }}>
-                    {new Date(order.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+      <div className="page-shell-scroll with-nav">
+        {loading ? (
+          <div className="loading-center"><div className="spinner" /></div>
+        ) : orders.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📦</div>
+            <h3>No Orders Yet</h3>
+            <p>Your wellness basket orders will appear here</p>
+            <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ marginTop:8, width:'auto', padding:'12px 24px' }}>
+              Get a Basket →
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding:'16px 20px' }}>
+            {orders.map(order => (
+              <div key={order._id} className="card" onClick={() => nav(`/orders/${order._id}`)}
+                style={{ marginBottom:12, cursor:'pointer' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:14 }}>{order.orderNo}</div>
+                    <div style={{ fontSize:12, color:'var(--text-light)', marginTop:2 }}>
+                      {new Date(order.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                    </div>
                   </div>
-                </div>
-                <span className={`status-pill status-${order.status}`}>
-                  {order.status.replace(/_/g, ' ')}
-                </span>
-              </div>
-              {order.deliveryDate && (
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
-                  <span style={{ fontSize:13 }}>📅</span>
-                  <span style={{ fontSize:13, color:'var(--text-mid)' }}>
-                    {new Date(order.deliveryDate).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })}
-                    {order.deliverySlot ? ` · ${order.deliverySlot}` : ''}
+                  <span className={`status-pill status-${order.status}`}>
+                    {order.status.replace(/_/g, ' ')}
                   </span>
                 </div>
-              )}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:13, color:'var(--text-light)' }}>{order.items?.length || 0} items</span>
-                <span style={{ fontWeight:700, color:'var(--green)', fontSize:17, fontFamily:'Playfair Display,serif' }}>
-                  ₹{order.totalAmount}
-                </span>
+                {order.deliveryDate && (
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+                    <span style={{ fontSize:13 }}>📅</span>
+                    <span style={{ fontSize:13, color:'var(--text-mid)' }}>
+                      {new Date(order.deliveryDate).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })}
+                      {order.deliverySlot ? ` · ${order.deliverySlot}` : ''}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:13, color:'var(--text-light)' }}>{order.items?.length || 0} items</span>
+                  <span style={{ fontWeight:700, color:'var(--green)', fontSize:17, fontFamily:'Playfair Display,serif' }}>
+                    ₹{order.totalAmount}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>{/* end page-shell-scroll */}
+
       <BottomNav />
     </div>
   )
@@ -98,14 +101,14 @@ export function OrderDetail() {
     } finally { setCancelling(false) }
   }
 
-  if (loading) return <div className="page-no-nav loading-center"><div className="spinner" /></div>
-  if (!order)  return <div className="page-no-nav loading-center"><p>Order not found</p></div>
+  if (loading) return <div className="page-shell" style={{ alignItems:'center', justifyContent:'center' }}><div className="spinner" style={{ width:36, height:36 }} /></div>
+  if (!order)  return <div className="page-shell" style={{ alignItems:'center', justifyContent:'center' }}><p>Order not found</p></div>
 
   const STATUS_STEPS = ['placed','confirmed','packed','out_for_delivery','delivered']
   const curStep = STATUS_STEPS.indexOf(order.status)
 
   return (
-    <div className="page-no-nav fade-in" style={{ minHeight:'100dvh', paddingBottom:40 }}>
+    <div className="page-shell fade-in">
       {/* Top bar */}
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav(-1)}>←</button>
@@ -113,6 +116,7 @@ export function OrderDetail() {
         <span className={`status-pill status-${order.status}`}>{order.status.replace(/_/g,' ')}</span>
       </div>
 
+      <div className="page-shell-scroll">
       <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
 
         {/* Progress tracker */}
@@ -177,6 +181,7 @@ export function OrderDetail() {
           </button>
         )}
       </div>
+      </div>{/* end page-shell-scroll */}
     </div>
   )
 }

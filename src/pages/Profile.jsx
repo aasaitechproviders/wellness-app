@@ -71,9 +71,9 @@ export default function Profile() {
   const f = fullFamily || family
 
   return (
-    <div className="page fade-in">
+    <div className="page-shell fade-in">
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '24px 20px 28px', textAlign: 'center', position: 'sticky', top: 0, zIndex: 50 }}>
+      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '24px 20px 28px', textAlign: 'center', flexShrink: 0 }}>
         <img src={logo} alt="KP" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'contain', marginBottom: 10 }} />
         <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 19, fontWeight: 700 }}>
           {f?.familyName || 'Your Family'}
@@ -82,6 +82,7 @@ export default function Profile() {
         {f?.city && <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 }}>📍 {f.city}</div>}
       </div>
 
+      <div className="page-shell-scroll with-nav">
       {loading ? (
         <div className="loading-center"><div className="spinner" /></div>
       ) : (
@@ -210,6 +211,7 @@ export default function Profile() {
           </button>
         </div>
       )}
+      </div>{/* end page-shell-scroll */}
       <BottomNav />
     </div>
   )

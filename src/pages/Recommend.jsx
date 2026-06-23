@@ -65,32 +65,27 @@ export default function Recommend() {
         <div className="top-bar-title">Recommended for You</div>
       </div>
 
-      {/* Scrollable content */}
-      <div className="page-shell-scroll" style={{ padding:'10px 18px 24px' }}>
+      {/* Scrollable content — wraps ALL body content */}
+      <div className="page-shell-scroll" style={{ padding: '10px 18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p style={{ fontSize: 13, color: 'var(--text-light)' }}>Personalised based on your wellness goals</p>
-      </div>
 
-      {/* Goals covered */}
-      {result.goalsCovered?.length > 0 && (
-        <div style={{ padding: '0 18px 10px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {result.goalsCovered.map(g => (
-            <span key={g.goalId} style={{ background: 'var(--green)', color: '#fff', padding: '4px 12px', borderRadius: 50, fontSize: 11, fontWeight: 600 }}>
-              ✓ {g.goalName}
-            </span>
-          ))}
-        </div>
-      )}
+        {/* Goals covered */}
+        {result.goalsCovered?.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {result.goalsCovered.map(g => (
+              <span key={g.goalId} style={{ background: 'var(--green)', color: '#fff', padding: '4px 12px', borderRadius: 50, fontSize: 11, fontWeight: 600 }}>
+                ✓ {g.goalName}
+              </span>
+            ))}
+          </div>
+        )}
 
-      <div style={{ padding: '4px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-        {/* Basket cards — "Top Picks For You" (Image 5) REMOVED per client */}
+        {/* Basket cards */}
         {result.baskets?.map(b => (
           <div key={b._id} style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
-            {/* Visual — shopping cart */}
             <div style={{ width: '100%', height: 120, background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 58 }}>
               🧺
             </div>
-
             <div style={{ padding: '14px 16px' }}>
               <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 3, textTransform: 'uppercase' }}>
                 {b.wellnessGoal || 'Wellness Basket'}
@@ -127,7 +122,6 @@ export default function Recommend() {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 22, fontWeight: 700, color: 'var(--green)' }}>₹{b.price}</div>
-                {/* Single clear CTA — no more "Add to Cart" vs "Choose Subscription Plan" confusion */}
                 <button
                   className="btn btn-primary btn-sm"
                   style={{ width: 'auto', padding: '10px 20px', borderRadius: 50 }}
@@ -151,14 +145,14 @@ export default function Recommend() {
           </div>
         )}
 
-        {/* Info card explaining the next step */}
+        {/* Info card */}
         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', padding: '13px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <span style={{ fontSize: 20 }}>💡</span>
           <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.7 }}>
             <strong>Next:</strong> View your basket → Choose how often you want delivery → Place your order. Customisation is optional.
           </div>
         </div>
-      </div>
+      </div>{/* end page-shell-scroll */}
 
       {/* Sticky footer */}
       {result.baskets?.length > 0 && (
