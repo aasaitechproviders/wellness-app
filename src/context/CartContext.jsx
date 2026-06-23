@@ -27,6 +27,12 @@ export function CartProvider({ children }) {
     setCartItems(prev => prev.filter(b => b._id?.toString() !== basketId?.toString()))
   }
 
+  const updateCartItem = (basketId, updates) => {
+    setCartItems(prev => prev.map(b =>
+      b._id?.toString() === basketId?.toString() ? { ...b, ...updates } : b
+    ))
+  }
+
   const clearCart = () => setCartItems([])
 
   const isInCart = (basketId) =>
@@ -36,7 +42,7 @@ export function CartProvider({ children }) {
   const cartCount = cartItems.length
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, isInCart, cartTotal, cartCount }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateCartItem, clearCart, isInCart, cartTotal, cartCount }}>
       {children}
     </CartContext.Provider>
   )

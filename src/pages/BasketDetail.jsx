@@ -117,9 +117,9 @@ export default function BasketDetail() {
 
   return (
     <>
-      <div className="page-full fade-in" style={{ minHeight: '100dvh', background: 'var(--cream)', paddingBottom: 110 }}>
+      <div className="page-shell fade-in">
 
-        {/* Top bar */}
+        {/* Sticky top bar */}
         <div className="top-bar">
           <button className="back-btn" onClick={() => nav(-1)}>←</button>
           <div className="top-bar-title">
@@ -129,6 +129,9 @@ export default function BasketDetail() {
             <button onClick={() => setView('view')} style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Done</button>
           )}
         </div>
+
+        {/* Scrollable content */}
+        <div className="page-shell-scroll">
 
         {/* ── VIEW MODE ── */}
         {view === 'view' && (
@@ -256,24 +259,25 @@ export default function BasketDetail() {
             </div>
           </>
         )}
-      </div>
+        </div>{/* end page-shell-scroll */}
 
-      {/* Fixed CTAs — Place Order is PRIMARY, Customize is secondary/optional */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '12px 18px 26px', background: '#fff', borderTop: '1px solid var(--border)', zIndex: 10 }}>
-        {view === 'view' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button className="btn btn-primary" onClick={goToReview}>
-              Place Order → ₹{basket.price}
+        {/* Sticky footer CTAs */}
+        <div className="sticky-footer">
+          {view === 'view' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button className="btn btn-primary" onClick={goToReview}>
+                Place Order → ₹{basket.price}
+              </button>
+              <button className="btn btn-secondary" onClick={() => setView('customize')} style={{ fontSize: 13, padding: '12px' }}>
+                Customise Basket (Optional)
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-primary" disabled={activeItems.length === 0} onClick={goToReview}>
+              {isCustomized ? `Proceed with Custom Basket → ₹${displayPrice}` : `Place Order → ₹${displayPrice}`}
             </button>
-            <button className="btn btn-secondary" onClick={() => setView('customize')} style={{ fontSize: 13, padding: '12px' }}>
-              Customise Basket (Optional)
-            </button>
-          </div>
-        ) : (
-          <button className="btn btn-primary" disabled={activeItems.length === 0} onClick={goToReview}>
-            {isCustomized ? `Proceed with Custom Basket → ₹${displayPrice}` : `Place Order → ₹${displayPrice}`}
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       <ProductCatalog visible={showCat} onClose={() => setShowCat(false)} onAdd={addFromCatalog} addedNames={addedNames} />

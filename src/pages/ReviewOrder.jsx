@@ -31,27 +31,37 @@ export default function ReviewOrder() {
   }))
 
   return (
-    <div className="page-full fade-in" style={{ minHeight:'100dvh', background:'var(--cream)', paddingBottom:90 }}>
+    <div className="page-shell">
+      {/* Sticky header */}
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav(-1)}>←</button>
         <div className="top-bar-title">Review Order</div>
       </div>
 
-      <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:12 }}>
+      {/* Scrollable content */}
+      <div className="page-shell-scroll" style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:12 }}>
 
         {/* Multi-basket summary */}
         {multiBasket ? (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {baskets.map((b, i) => (
-              <div key={i} style={{ background:'var(--green-pale)', borderRadius:10, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ fontSize:20 }}>🧺</span>
-                  <div>
-                    <div style={{ fontWeight:600, fontSize:13, color:'var(--green)' }}>{b.basketName}</div>
-                    {b.wellnessGoal && <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>✓ {b.wellnessGoal}</div>}
+              <div key={i} style={{ background:'var(--green-pale)', borderRadius:12, padding:'12px 14px' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: b.assignedMemberId ? 4 : 0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:20 }}>🧺</span>
+                    <div>
+                      <div style={{ fontWeight:600, fontSize:13, color:'var(--green)' }}>{b.basketName}</div>
+                      {b.wellnessGoal && <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>✓ {b.wellnessGoal}</div>}
+                    </div>
                   </div>
+                  <div style={{ fontWeight:700, fontSize:14, color:'var(--green)', fontFamily:'Playfair Display,serif' }}>₹{b.price}</div>
                 </div>
-                <div style={{ fontWeight:700, fontSize:14, color:'var(--green)', fontFamily:'Playfair Display,serif' }}>₹{b.price}</div>
+                {b.assignedMemberId && b._assignedName && (
+                  <div style={{ fontSize:11, color:'var(--text-mid)', marginLeft:30 }}>For: {b._assignedName}</div>
+                )}
+                {(b.extraProducts?.length > 0) && (
+                  <div style={{ fontSize:11, color:'#B7791F', marginLeft:30, marginTop:2 }}>+ {b.extraProducts.length} extra item{b.extraProducts.length > 1 ? 's' : ''} added</div>
+                )}
               </div>
             ))}
           </div>
@@ -125,7 +135,8 @@ export default function ReviewOrder() {
         </div>
       </div>
 
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'12px 18px 26px', background:'#fff', borderTop:'1px solid var(--border)' }}>
+      {/* Sticky footer */}
+      <div className="sticky-footer">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, marginBottom:9 }}>
           <span>🔒</span><span style={{ fontSize:12, color:'var(--text-light)' }}>100% Secure Payments</span>
         </div>

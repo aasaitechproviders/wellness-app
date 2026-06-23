@@ -73,7 +73,7 @@ export default function Profile() {
   return (
     <div className="page fade-in">
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '24px 20px 28px', textAlign: 'center' }}>
+      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '24px 20px 28px', textAlign: 'center', position: 'sticky', top: 0, zIndex: 50 }}>
         <img src={logo} alt="KP" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'contain', marginBottom: 10 }} />
         <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 19, fontWeight: 700 }}>
           {f?.familyName || 'Your Family'}

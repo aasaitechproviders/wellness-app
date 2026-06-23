@@ -67,13 +67,15 @@ export default function Schedule() {
   }
 
   return (
-    <div className="page-full fade-in" style={{minHeight:'100dvh',background:'var(--cream)',paddingBottom:90}}>
+    <div className="page-shell">
+      {/* Sticky header */}
       <div className="top-bar">
         <button className="back-btn" onClick={()=>nav(-1)}>←</button>
         <div className="top-bar-title">Schedule Delivery</div>
       </div>
 
-      <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:18}}>
+      {/* Scrollable content */}
+      <div className="page-shell-scroll" style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:18}}>
 
         {/* Address */}
         {family&&(
@@ -88,7 +90,7 @@ export default function Schedule() {
           </div>
         )}
 
-        {/* Day picker — SS shows 4 days in a row */}
+        {/* Day picker */}
         <div>
           <div style={{fontWeight:600,fontSize:15,marginBottom:12}}>Select Delivery Day</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:8}}>
@@ -121,7 +123,8 @@ export default function Schedule() {
         </div>
       </div>
 
-      <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:430,padding:'12px 18px 26px',background:'#fff',borderTop:'1px solid var(--border)'}}>
+      {/* Sticky footer */}
+      <div className="sticky-footer">
         <button className="btn btn-primary" onClick={confirm} disabled={going||!day||!slot}>
           {going&&<span className="spinner" style={{width:18,height:18,borderWidth:2}}/>}
           {going?'Placing Order...':'Confirm Delivery →'}

@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import logo from '../assets/logo.jpeg'
+import BottomNav from '../components/BottomNav'
 
 export default function Confirmed() {
   const nav = useNavigate()
@@ -8,12 +9,20 @@ export default function Confirmed() {
   const allBaskets = multiBasket && baskets.length ? baskets : (basket ? [basket] : [])
 
   return (
-    <div className="page-full fade-in" style={{
-      minHeight: '100dvh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      padding: '36px 22px', textAlign: 'center',
-      background: 'linear-gradient(180deg,var(--green-pale) 0%,var(--cream) 100%)',
-    }}>
+    <div className="page-shell fade-in">
+      {/* Sticky header */}
+      <div className="top-bar">
+        <button className="back-btn" onClick={() => nav('/home', { replace: true })}>←</button>
+        <div className="top-bar-title">Order Confirmed</div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="page-shell-scroll with-nav" style={{
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', padding: '28px 22px 24px', textAlign: 'center',
+        background: 'linear-gradient(180deg,var(--green-pale) 0%,var(--cream) 100%)',
+        minHeight: '100%',
+      }}>
       {/* Success icon */}
       <div style={{
         width: 90, height: 90, borderRadius: '50%', background: 'var(--green)',
@@ -72,6 +81,9 @@ export default function Confirmed() {
       </div>
 
       <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.4)}to{opacity:1;transform:scale(1)}}`}</style>
+      </div>{/* end page-shell-scroll */}
+
+      <BottomNav />
     </div>
   )
 }

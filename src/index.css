@@ -47,6 +47,25 @@ html, body {
 .page-full { min-height: 100dvh; }
 .page-no-nav { min-height: 100dvh; }
 
+/* Flex-column shell: sticky header + scrollable body + sticky footer */
+.page-shell {
+  display: flex; flex-direction: column;
+  height: 100dvh; overflow: hidden;
+  background: var(--cream);
+}
+.page-shell-scroll {
+  flex: 1; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.page-shell-scroll.with-nav { padding-bottom: var(--nav-h); }
+.sticky-footer {
+  position: sticky; bottom: 0; z-index: 40;
+  background: #fff; border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+
 /* ── TOP BAR ─────────────────────────────────────────────── */
 .top-bar {
   display: flex; align-items: center; gap: 10px;

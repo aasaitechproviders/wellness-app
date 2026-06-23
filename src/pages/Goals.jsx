@@ -176,13 +176,9 @@ export default function Goals() {
         })}
       </div>
 
-      {/* Fixed CTA */}
+      {/* Sticky footer CTA — above bottom nav */}
       {members.length > 0 && (
-        <div style={{
-          position: 'fixed', bottom: 64, left: '50%', transform: 'translateX(-50%)',
-          width: '100%', maxWidth: 430, padding: '12px 18px',
-          background: '#fff', borderTop: '1px solid var(--border)', zIndex: 40,
-        }}>
+        <div className="sticky-footer" style={{ paddingBottom: 'calc(var(--nav-h) + 12px)' }}>
           <button className="btn btn-primary" onClick={go} disabled={saving || total === 0}>
             {saving && <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }}/>}
             {saving ? 'Getting your basket...' : 'Get My Wellness Basket →'}

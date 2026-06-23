@@ -33,13 +33,15 @@ export default function Plans() {
   }
 
   return (
-    <div className="page-full fade-in" style={{ minHeight:'100dvh', background:'var(--cream)', display:'flex', flexDirection:'column' }}>
+    <div className="page-shell">
+      {/* Sticky header */}
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav(-1)}>←</button>
         <div className="top-bar-title">Choose Your Plan</div>
       </div>
 
-      <div style={{ flex:1, padding:'18px 18px 100px' }}>
+      {/* Scrollable content */}
+      <div className="page-shell-scroll" style={{ padding:'18px 18px 24px' }}>
         <p style={{ fontSize:13, color:'var(--text-light)', marginBottom:18 }}>
           Pick a plan that suits your family. You'll see your basket next.
         </p>
@@ -63,15 +65,9 @@ export default function Plans() {
           </div>
         ))}
 
-        {/* What's included — "Flexible — cancel anytime" REMOVED per client Image 6 */}
         <div className="card" style={{ marginTop:6 }}>
           <div style={{ fontWeight:700, fontSize:12, marginBottom:12, color:'var(--text-mid)', letterSpacing:0.5 }}>ALL PLANS INCLUDE</div>
-          {[
-            ['🚚','Free delivery to your apartment'],
-            ['🌿','Farm-fresh organic produce'],
-            ['📦','Hygienically packed boxes'],
-            ['💚','Personalised wellness picks'],
-          ].map(([ic, tx]) => (
+          {[['🚚','Free delivery to your apartment'],['🌿','Farm-fresh organic produce'],['📦','Hygienically packed boxes'],['💚','Personalised wellness picks']].map(([ic, tx]) => (
             <div key={tx} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:9 }}>
               <span style={{ fontSize:18 }}>{ic}</span>
               <span style={{ fontSize:13, color:'var(--text-mid)' }}>{tx}</span>
@@ -87,7 +83,8 @@ export default function Plans() {
         </div>
       </div>
 
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'14px 18px 28px', background:'#fff', borderTop:'1px solid var(--border)' }}>
+      {/* Sticky footer */}
+      <div className="sticky-footer">
         <button className="btn btn-primary" onClick={go}>Continue to Your Basket →</button>
       </div>
     </div>

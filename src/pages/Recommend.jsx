@@ -58,13 +58,15 @@ export default function Recommend() {
   )
 
   return (
-    <div className="page-full fade-in" style={{ minHeight: '100dvh', background: 'var(--cream)', paddingBottom: 100 }}>
+    <div className="page-shell fade-in">
+      {/* Sticky header */}
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav(-1)}>←</button>
         <div className="top-bar-title">Recommended for You</div>
       </div>
 
-      <div style={{ padding: '10px 18px 6px' }}>
+      {/* Scrollable content */}
+      <div className="page-shell-scroll" style={{ padding:'10px 18px 24px' }}>
         <p style={{ fontSize: 13, color: 'var(--text-light)' }}>Personalised based on your wellness goals</p>
       </div>
 
@@ -158,9 +160,9 @@ export default function Recommend() {
         </div>
       </div>
 
-      {/* Single bottom CTA — goes to choose plan */}
+      {/* Sticky footer */}
       {result.baskets?.length > 0 && (
-        <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, padding: '12px 18px 26px', background: '#fff', borderTop: '1px solid var(--border)' }}>
+        <div className="sticky-footer">
           <button className="btn btn-primary" onClick={() => nav('/plans', { state: { result } })}>
             Choose Subscription Plan →
           </button>
