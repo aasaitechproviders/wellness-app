@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
-import { showToast } from '../components/Toast'
 import BottomNav from '../components/BottomNav'
 
 export function Orders() {
@@ -84,22 +83,9 @@ export function OrderDetail() {
   const nav = useNavigate()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [cancelling, setCancelling] = useState(false)
-
   useEffect(() => {
     api.getOrder(id).then(d => setOrder(d.order)).finally(() => setLoading(false))
   }, [id])
-
-  const cancelOrder = async () => {
-    if (!window.confirm('Cancel this order?')) return
-    setCancelling(true)
-    try {
-      await api.cancelOrder(id)
-      setOrder(o => ({ ...o, status:'cancelled' }))
-      showToast('Order cancelled', 'success')
-    } catch(e) { showToast(e.message, 'error')
-    } finally { setCancelling(false) }
-  }
 
   if (loading) return <div className="page-shell" style={{ alignItems:'center', justifyContent:'center' }}><div className="spinner" style={{ width:36, height:36 }} /></div>
   if (!order)  return <div className="page-shell" style={{ alignItems:'center', justifyContent:'center' }}><p>Order not found</p></div>
@@ -174,11 +160,11 @@ export function OrderDetail() {
           <div style={{ fontSize:13, color:'var(--text-light)', marginTop:6 }}>Payment: {order.paymentMethod}</div>
         </div>
 
-        {!['cancelled','delivered'].includes(order.status) && (
-          <button className="btn btn-ghost" onClick={cancelOrder} disabled={cancelling}
-            style={{ borderColor:'#DC2626', color:'#DC2626' }}>
-            {cancelling ? 'Cancelling...' : 'Cancel Order'}
-          </button>
+        {order.status === 'cancelled' && (
+          <div style={{ background:'#FEE2E2', borderRadius:12, padding:'12px 14px', display:'flex', gap:10, alignItems:'center' }}>
+            <span style={{ fontSize:18 }}>❌</span>
+            <div style={{ fontSize:13, color:'#DC2626', fontWeight:600 }}>This order has been cancelled</div>
+          </div>
         )}
       </div>
       </div>{/* end page-shell-scroll */}

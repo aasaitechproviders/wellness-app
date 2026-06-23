@@ -36,7 +36,8 @@ export default function Goals() {
       const m = d.family?.members || []
       setMembers(m)
       const init = {}
-      m.forEach(x => { init[x.memberId] = x.wellnessGoals || [] })
+      // Trim any existing goals to max 3 per member
+      m.forEach(x => { init[x.memberId] = (x.wellnessGoals || []).slice(0, 3) })
       setLocal(init)
     })
   }, [family])
