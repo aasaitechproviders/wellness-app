@@ -126,12 +126,13 @@ export default function Goals() {
       <div style={{ padding: '4px 18px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {goals.map(g => {
           const meta     = GM[g.goalName] || { icon: '🌿', color: '#E8F5E9' }
-          const sel      = curG.includes(g.goalId)
+          // wellnessGoals in DB stores goalName strings (set by Setup.jsx using g.id = goalName)
+          const sel      = curG.includes(g.goalName)
           const disabled = !sel && curG.length >= 3
           return (
             <div
-              key={g.goalId}
-              onClick={() => cur && toggle(cur.memberId, g.goalId)}
+              key={g.goalId || g.goalName}
+              onClick={() => cur && toggle(cur.memberId, g.goalName)}
               style={{
                 position: 'relative',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
