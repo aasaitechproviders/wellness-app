@@ -20,10 +20,6 @@ const WELLNESS_GOALS = [
   { id:'General Wellness',   icon:'🌿', label:'General Wellness',   color:'#E8F5E9' },
 ]
 
-const HEALTH_CHALLENGES = [
-  'High Blood Sugar','High Blood Pressure','Low Hemoglobin','Fatigue','Low Energy',
-  'Frequent Illness','Obesity','Underweight','Constipation','Poor Appetite','Cholesterol','None',
-]
 
 const TASTE_PREFS  = ['Sweet','Mild','Tangy','Spicy','Bitter']
 const COOK_PREFS   = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
@@ -131,10 +127,10 @@ export default function Setup() {
       const f = d.family
       if (!f) return
 
-      // Detect delivery type: if apartmentId is set it was gated, else individual
+      // Detect delivery type
       const deliveryType = f.apartmentId ? 'gated' : 'individual'
 
-      // Parse landmark and pincode back out of address string (stored as "landmark, pincode")
+      // Parse landmark and pincode back out of address string
       const addrParts = (f.address || '').split(',').map(s => s.trim())
       const pincode   = addrParts.find(p => /^\d{6}$/.test(p)) || ''
       const landmark  = addrParts.filter(p => p !== pincode).join(', ')
@@ -148,44 +144,57 @@ export default function Setup() {
         flatNo:             f.flatNo || '',
         landmark:           deliveryType === 'individual' ? landmark : '',
         pincode:            deliveryType === 'individual' ? pincode  : '',
-        city:               f.city || 'Coimbatore',
+        city:               f.city || '',
         deliveryPreference: f.deliveryPreference || 'Morning',
       })
 
-      // Pre-fill members from DB — map DB member shape to local emptyMember shape
+      // Pre-fill members — map every DB field back to local member shape
       if (f.members?.length) {
         const prefilled = f.members.map(m => {
-          // Parse dietaryRestrictions back to dislikedVeg / dislikedFruit / allergies
           const restrictions  = m.dietaryRestrictions || []
           const dislikedVeg   = m.dislikedVeg   || []
           const dislikedFruit = m.dislikedFruit || []
           const allergies     = restrictions.filter(r => !r.startsWith('No '))
 
+          // vegFruitRestriction: explicit saved value > derived from arrays > null (unanswered)
+          let hasVegFruitRestriction
+          if (m.vegFruitRestriction !== undefined && m.vegFruitRestriction !== null) {
+            hasVegFruitRestriction = m.vegFruitRestriction
+          } else if (dislikedVeg.length + dislikedFruit.length > 0) {
+            hasVegFruitRestriction = true
+          } else {
+            hasVegFruitRestriction = null
+          }
+
           return {
             ...emptyMember(),
-            _existingId:    m.memberId,
-            name:           m.name || '',
-            age:            m.age?.toString() || '',
-            gender:         m.gender || 'Female',
-            height:         m.height?.toString() || '',
-            weight:         m.weight?.toString() || '',
-            wellnessGoals:  m.wellnessGoals || [],
-            healthChallenges: m.healthChallenges || [],
-            dietaryRestrictions: restrictions,
+            _existingId:          m.memberId,
+            relationship:         m.relationship    || 'Self',
+            name:                 m.name            || '',
+            age:                  m.age?.toString() || '',
+            gender:               m.gender          || 'Female',
+            height:               m.height?.toString() || '',
+            weight:               m.weight?.toString() || '',
+            activityLevel:        m.activityLevel   || 'Moderately Active',
+            wellnessGoals:        m.wellnessGoals   || [],
+            healthChallenges:     m.healthChallenges || [],
             dislikedVeg,
             dislikedFruit,
-            hasVegFruitRestriction: (dislikedVeg.length + dislikedFruit.length) > 0 ? true : null,
-            allergies:      allergies.length ? allergies : [],
-            tastePref:      m.tastePref      || [],
-            cookPref:       m.cookPref       || [],
-            preferredPlan:  m.preferredPlan  || '',
-            budget:         m.budget         || '',
-            dietType:       f.dietPreference || 'Vegetarian',
+            hasVegFruitRestriction,
+            vegFruitRestriction:  hasVegFruitRestriction,
+            allergies:            allergies.length ? allergies : [],
+            tastePref:            m.tastePref      || [],
+            cookPref:             m.cookPref       || [],
+            preferredPlan:        m.preferredPlan  || '',
+            budget:               m.budget         || '',
+            dietType:             m.dietType       || f.dietPreference || 'Vegetarian',
           }
         })
         setMembers(prefilled)
       }
-    }).catch(() => {}).finally(() => setPrefillLoading(false))
+    }).catch(e => {
+      showToast('Could not load your profile. Please try again.', 'error')
+    }).finally(() => setPrefillLoading(false))
   }, [isEditMode, family?._id])
 
 
@@ -283,37 +292,45 @@ export default function Setup() {
         for (const m of members) {
           if (m._existingId) {
             await api.updateMember(family._id, m._existingId, {
-              name:          m.name,
-              age:           parseInt(m.age) || null,
-              gender:        m.gender,
-              height:        parseFloat(m.height) || null,
-              weight:        parseFloat(m.weight) || null,
-              wellnessGoals: m.wellnessGoals,
-              healthChallenges: m.healthChallenges || [],
-              dislikedVeg:   m.dislikedVeg   || [],
-              dislikedFruit: m.dislikedFruit || [],
+              name:                m.name,
+              age:                 parseInt(m.age) || null,
+              gender:              m.gender,
+              relationship:        m.relationship   || 'Self',
+              height:              parseFloat(m.height) || null,
+              weight:              parseFloat(m.weight) || null,
+              activityLevel:       m.activityLevel  || 'Moderately Active',
+              dietType:            m.dietType       || 'Vegetarian',
+              wellnessGoals:       m.wellnessGoals,
+              healthChallenges:    m.healthChallenges || [],
+              dislikedVeg:         m.dislikedVeg    || [],
+              dislikedFruit:       m.dislikedFruit  || [],
+              vegFruitRestriction: m.hasVegFruitRestriction ?? null,
               dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
-              tastePref:     m.tastePref     || [],
-              cookPref:      m.cookPref      || [],
-              preferredPlan: m.preferredPlan || '',
-              budget:        m.budget        || '',
+              tastePref:           m.tastePref      || [],
+              cookPref:            m.cookPref       || [],
+              preferredPlan:       m.preferredPlan  || '',
+              budget:              m.budget         || '',
             })
           } else {
             await api.addMember(family._id, {
-              name:          m.name,
-              age:           parseInt(m.age) || null,
-              gender:        m.gender,
-              height:        parseFloat(m.height) || null,
-              weight:        parseFloat(m.weight) || null,
-              wellnessGoals: m.wellnessGoals,
-              healthChallenges: m.healthChallenges || [],
-              dislikedVeg:   m.dislikedVeg   || [],
-              dislikedFruit: m.dislikedFruit || [],
+              name:                m.name,
+              age:                 parseInt(m.age) || null,
+              gender:              m.gender,
+              relationship:        m.relationship   || 'Self',
+              height:              parseFloat(m.height) || null,
+              weight:              parseFloat(m.weight) || null,
+              activityLevel:       m.activityLevel  || 'Moderately Active',
+              dietType:            m.dietType       || 'Vegetarian',
+              wellnessGoals:       m.wellnessGoals,
+              healthChallenges:    m.healthChallenges || [],
+              dislikedVeg:         m.dislikedVeg    || [],
+              dislikedFruit:       m.dislikedFruit  || [],
+              vegFruitRestriction: m.hasVegFruitRestriction ?? null,
               dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
-              tastePref:     m.tastePref     || [],
-              cookPref:      m.cookPref      || [],
-              preferredPlan: m.preferredPlan || '',
-              budget:        m.budget        || '',
+              tastePref:           m.tastePref      || [],
+              cookPref:            m.cookPref       || [],
+              preferredPlan:       m.preferredPlan  || '',
+              budget:              m.budget         || '',
             })
           }
         }
@@ -341,20 +358,24 @@ export default function Setup() {
 
         for (const m of members) {
           await api.addMember(reg.family._id, {
-            name:          m.name,
-            age:           parseInt(m.age) || null,
-            gender:        m.gender,
-            height:        parseFloat(m.height) || null,
-            weight:        parseFloat(m.weight) || null,
-            wellnessGoals: m.wellnessGoals,
-            healthChallenges: m.healthChallenges || [],
-            dislikedVeg:   m.dislikedVeg   || [],
-            dislikedFruit: m.dislikedFruit || [],
+            name:                m.name,
+            age:                 parseInt(m.age) || null,
+            gender:              m.gender,
+            relationship:        m.relationship   || 'Self',
+            height:              parseFloat(m.height) || null,
+            weight:              parseFloat(m.weight) || null,
+            activityLevel:       m.activityLevel  || 'Moderately Active',
+            dietType:            m.dietType       || 'Vegetarian',
+            wellnessGoals:       m.wellnessGoals,
+            healthChallenges:    m.healthChallenges || [],
+            dislikedVeg:         m.dislikedVeg    || [],
+            dislikedFruit:       m.dislikedFruit  || [],
+            vegFruitRestriction: m.hasVegFruitRestriction ?? null,
             dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
-            tastePref:     m.tastePref     || [],
-            cookPref:      m.cookPref      || [],
-            preferredPlan: m.preferredPlan || '',
-            budget:        m.budget        || '',
+            tastePref:           m.tastePref      || [],
+            cookPref:            m.cookPref       || [],
+            preferredPlan:       m.preferredPlan  || '',
+            budget:              m.budget         || '',
           })
         }
 
@@ -444,7 +465,7 @@ function Step0({ p, sf }) {
         const list = d.cities || []
         setCities(list)
         // Set default city to first in list if not already set
-        if (list.length > 0 && !list.includes(p.city)) sf('city', list[0])
+        if (list.length > 0 && !p.city) sf('city', list[0])
       })
       .catch(() => {})
       .finally(() => setCitiesLoading(false))
@@ -766,6 +787,13 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
 function Step2({ members, active, setActive, smfToggle }) {
   const m = members[active]
   const goalsCount = m?.wellnessGoals?.length || 0
+  const [healthChallengeOptions, setHealthChallengeOptions] = useState([])
+
+  useEffect(() => {
+    api.getHealthChallenges()
+      .then(d => setHealthChallengeOptions(d.challenges || []))
+      .catch(() => {})
+  }, [])
 
   return (
     <div>
@@ -824,7 +852,7 @@ function Step2({ members, active, setActive, smfToggle }) {
         <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>Current Health Challenges</div>
         <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>Optional — helps us personalise better</div>
         <SearchChipSelect
-          items={HEALTH_CHALLENGES}
+          items={healthChallengeOptions}
           selected={m?.healthChallenges || []}
           onToggle={(hc) => smfToggle('healthChallenges', hc)}
           placeholder="Search challenges…"
