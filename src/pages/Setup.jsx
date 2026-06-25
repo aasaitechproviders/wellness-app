@@ -776,7 +776,7 @@ function Step2({ members, active, setActive, smfToggle }) {
         <span style={{ fontSize:12, color: goalsCount >= 3 ? '#DC2626' : 'var(--text-light)' }}>{goalsCount}/3 selected</span>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
         {WELLNESS_GOALS.map(g => {
           const sel = m?.wellnessGoals?.includes(g.id) || false
           const disabled = !sel && goalsCount >= 3
@@ -785,18 +785,20 @@ function Step2({ members, active, setActive, smfToggle }) {
               onClick={() => !disabled && smfToggle('wellnessGoals', g.id)}
               style={{
                 position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                padding:'18px 10px 14px', gap:8,
+                padding:'12px 8px 10px', gap:6,
                 background: sel ? 'var(--green-pale)' : '#fff',
                 border:`1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`,
-                borderRadius:14, minHeight:100,
-                opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
+                borderRadius:12, minHeight:80,
+                opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
                 transition:'all 0.15s',
               }}>
-              <div style={{ position:'absolute', top:7, right:7, width:19, height:19, borderRadius:'50%', background: sel ? 'var(--green)' : 'transparent', border:`1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
-                {sel && <span style={{ color:'#fff', fontSize:10, fontWeight:900, lineHeight:1 }}>✓</span>}
-              </div>
-              <div style={{ width:44, height:44, borderRadius:12, background: sel ? 'rgba(45,106,53,0.1)' : g.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>{g.icon}</div>
-              <div style={{ fontSize:12, fontWeight:600, color: sel ? 'var(--green)' : 'var(--text)', textAlign:'center', lineHeight:1.3 }}>{g.label}</div>
+              {sel && (
+                <div style={{ position:'absolute', top:6, right:6, width:16, height:16, borderRadius:'50%', background:'var(--green)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <span style={{ color:'#fff', fontSize:9, fontWeight:900, lineHeight:1 }}>✓</span>
+                </div>
+              )}
+              <div style={{ width:34, height:34, borderRadius:10, background: sel ? 'rgba(45,106,53,0.12)' : g.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{g.icon}</div>
+              <div style={{ fontSize:11, fontWeight:600, color: sel ? 'var(--green)' : 'var(--text)', textAlign:'center', lineHeight:1.3 }}>{g.label}</div>
             </div>
           )
         })}

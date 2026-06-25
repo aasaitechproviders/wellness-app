@@ -123,7 +123,7 @@ export default function Goals() {
       )}
 
       {/* Goal grid — styled exactly like Image 11 */}
-      <div style={{ padding: '4px 18px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ padding: '4px 18px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {goals.map(g => {
           const meta     = GM[g.goalName] || { icon: '🌿', color: '#E8F5E9' }
           // wellnessGoals in DB stores goalName strings (set by Setup.jsx using g.id = goalName)
@@ -136,39 +136,39 @@ export default function Goals() {
               style={{
                 position: 'relative',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                padding: '20px 10px 16px', gap: 10,
+                padding: '12px 8px 10px', gap: 6,
                 background: sel ? 'var(--green-pale)' : '#fff',
                 border: `1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`,
-                borderRadius: 16,
+                borderRadius: 12,
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.4 : 1,
+                opacity: disabled ? 0.35 : 1,
                 transition: 'all 0.15s',
-                minHeight: 110,
+                minHeight: 80,
               }}>
-              {/* Checkmark circle — top right, like Image 11 */}
-              <div style={{
-                position: 'absolute', top: 8, right: 8,
-                width: 20, height: 20, borderRadius: '50%',
-                background: sel ? 'var(--green)' : 'transparent',
-                border: `1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s',
-              }}>
-                {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-              </div>
+              {/* Only show tick when selected */}
+              {sel && (
+                <div style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: 'var(--green)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ color: '#fff', fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                </div>
+              )}
 
               {/* Coloured icon background */}
               <div style={{
-                width: 48, height: 48, borderRadius: 14,
+                width: 34, height: 34, borderRadius: 10,
                 background: sel ? 'rgba(45,106,53,0.12)' : meta.color,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 24,
+                fontSize: 17,
               }}>
                 {meta.icon}
               </div>
 
               <div style={{
-                fontSize: 12, fontWeight: 600,
+                fontSize: 11, fontWeight: 600,
                 color: sel ? 'var(--green)' : 'var(--text)',
                 textAlign: 'center', lineHeight: 1.3,
               }}>
