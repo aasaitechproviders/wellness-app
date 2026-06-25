@@ -176,6 +176,10 @@ export default function Setup() {
             dislikedFruit,
             hasVegFruitRestriction: (dislikedVeg.length + dislikedFruit.length) > 0 ? true : null,
             allergies:      allergies.length ? allergies : [],
+            tastePref:      m.tastePref      || [],
+            cookPref:       m.cookPref       || [],
+            preferredPlan:  m.preferredPlan  || '',
+            budget:         m.budget         || '',
             dietType:       f.dietPreference || 'Vegetarian',
           }
         })
@@ -289,6 +293,10 @@ export default function Setup() {
               dislikedVeg:   m.dislikedVeg   || [],
               dislikedFruit: m.dislikedFruit || [],
               dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
+              tastePref:     m.tastePref     || [],
+              cookPref:      m.cookPref      || [],
+              preferredPlan: m.preferredPlan || '',
+              budget:        m.budget        || '',
             })
           } else {
             await api.addMember(family._id, {
@@ -302,6 +310,10 @@ export default function Setup() {
               dislikedVeg:   m.dislikedVeg   || [],
               dislikedFruit: m.dislikedFruit || [],
               dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
+              tastePref:     m.tastePref     || [],
+              cookPref:      m.cookPref      || [],
+              preferredPlan: m.preferredPlan || '',
+              budget:        m.budget        || '',
             })
           }
         }
@@ -339,6 +351,10 @@ export default function Setup() {
             dislikedVeg:   m.dislikedVeg   || [],
             dislikedFruit: m.dislikedFruit || [],
             dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
+            tastePref:     m.tastePref     || [],
+            cookPref:      m.cookPref      || [],
+            preferredPlan: m.preferredPlan || '',
+            budget:        m.budget        || '',
           })
         }
 
