@@ -48,7 +48,22 @@ export default function Home() {
       // Use recommendation engine if goals exist, otherwise show all baskets
       const basketPromise = members.length > 0
         ? api.recommend({ members })
-            .then(d => (d.recommendation?.baskets || []).slice(0, 4))
+            .then(d => {
+              // Build flat list from memberResults with member name attached
+              const memberResults = d.recommendation?.memberResults || []
+              const seen = new Set()
+              const flat = []
+              for (const mr of memberResults) {
+                for (const b of (mr.baskets || [])) {
+                  const key = b._id?.toString()
+                  if (!seen.has(key)) {
+                    seen.add(key)
+                    flat.push({ ...b, _forMember: mr.memberName })
+                  }
+                }
+              }
+              return flat.slice(0, 4)
+            })
             .catch(() => api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => []))
         : api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => [])
 
@@ -245,6 +260,11 @@ export default function Home() {
                       key={b._id}
                       style={{ background: '#fff', borderRadius: 14, padding: '14px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
                       <div style={{ fontSize: 30, marginBottom: 8 }}>🧺</div>
+                      {b._forMember && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--green)', color: '#fff', padding: '2px 8px', borderRadius: 50, fontSize: 10, fontWeight: 700, marginBottom: 6, alignSelf: 'flex-start' }}>
+                          👤 {b._forMember}
+                        </div>
+                      )}
                       <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 4 }}>{b.basketName}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 8, lineHeight: 1.4 }}>{b.description}</div>
                       {b.wellnessGoal && (
