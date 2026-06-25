@@ -66,12 +66,14 @@ export default function Login() {
           <div style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
             Welcome to Krisha Pure
           </div>
-          
+          <div style={{ fontSize: 13, color: 'var(--text-light)', marginTop: 5 }}>
+            Enter your mobile number to get started
+          </div>
         </div>
 
         {/* Phone input */}
         <div className="input-wrap">
-          <label className="input-label">Mobile Number(Enter your mobile number to get started)</label>
+          <label className="input-label">Mobile Number</label>
           <div style={{ position: 'relative' }}>
             <span style={{
               position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
