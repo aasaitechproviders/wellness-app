@@ -46,7 +46,7 @@ export default function Login() {
         </p>
         {/* Updated icons */}
         <div style={{ display: 'flex', gap: 32, marginTop: 4 }}>
-          {[['🥗','Fresh'],['💚','Pure'],['🌾','Natural']].map(([e,l]) => (
+          {[['🥗','Fresh'],['💚','Pure'],['🌿','Nutrient Rich']].map(([e,l]) => (
             <div key={l} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 26 }}>{e}</div>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, marginTop: 5 }}>{l}</div>
