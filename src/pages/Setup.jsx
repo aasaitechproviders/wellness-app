@@ -1052,7 +1052,10 @@ function ToggleChip({ label, selected, onToggle }) {
 
 function SearchChipSelect({ items, selected, onToggle, placeholder = 'Search…' }) {
   const [q, setQ] = useState('')
-  const filtered = items.filter(i => i.toLowerCase().includes(q.toLowerCase()))
+  const filtered = q.trim()
+    ? items.filter(i => i.toLowerCase().includes(q.toLowerCase()) && !selected.includes(i))
+    : []
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
       {/* Search box */}
@@ -1066,7 +1069,8 @@ function SearchChipSelect({ items, selected, onToggle, placeholder = 'Search…'
           onChange={e => setQ(e.target.value)}
         />
       </div>
-      {/* Selected chips */}
+
+      {/* Selected chips — always visible */}
       {selected.length > 0 && (
         <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
           {selected.map(s => (
@@ -1081,21 +1085,30 @@ function SearchChipSelect({ items, selected, onToggle, placeholder = 'Search…'
           ))}
         </div>
       )}
-      {/* Unselected filtered items */}
-      <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-        {filtered.filter(i => !selected.includes(i)).map(item => (
-          <button
-            key={item}
-            onClick={() => onToggle(item)}
-            style={{ padding:'6px 14px', borderRadius:50, fontSize:12, fontWeight:500, border:'1.5px solid var(--border)', background:'#fff', color:'var(--text)', cursor:'pointer', transition:'all 0.15s', fontFamily:'var(--font-body)' }}
-          >
-            {item}
-          </button>
-        ))}
-        {filtered.filter(i => !selected.includes(i)).length === 0 && q && (
-          <div style={{ fontSize:12, color:'var(--text-light)', padding:'4px 0' }}>No results for "{q}"</div>
-        )}
-      </div>
+
+      {/* Search results — only when query is typed */}
+      {q.trim() ? (
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+          {filtered.length > 0
+            ? filtered.map(item => (
+                <button
+                  key={item}
+                  onClick={() => { onToggle(item); setQ('') }}
+                  style={{ padding:'6px 14px', borderRadius:50, fontSize:12, fontWeight:500, border:'1.5px solid var(--border)', background:'#fff', color:'var(--text)', cursor:'pointer', transition:'all 0.15s', fontFamily:'var(--font-body)' }}
+                >
+                  + {item}
+                </button>
+              ))
+            : <div style={{ fontSize:12, color:'var(--text-light)', padding:'4px 0' }}>No results for "{q}"</div>
+          }
+        </div>
+      ) : (
+        selected.length === 0 && (
+          <div style={{ fontSize:12, color:'var(--text-light)', padding:'4px 2px' }}>
+            Type above to search and select items to avoid
+          </div>
+        )
+      )}
     </div>
   )
 }
