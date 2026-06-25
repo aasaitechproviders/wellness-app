@@ -477,16 +477,17 @@ function Step0({ p, sf }) {
             <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Loading cities…</span>
           </div>
         ) : (
-          <div style={{ display:'flex', gap:10, marginTop:10 }}>
+          <select
+            className="input-field"
+            style={{ marginTop: 10 }}
+            value={p.city}
+            onChange={e => sf('city', e.target.value)}
+          >
+            <option value="">Select city…</option>
             {cities.map(c => (
-              <div key={c} onClick={() => sf('city', c)} style={{ flex:1, display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
-                <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  {p.city===c && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
-                </div>
-                <span style={{ fontWeight:600, fontSize:14, color:p.city===c?'var(--green)':'var(--text)' }}>{c}</span>
-              </div>
+              <option key={c} value={c}>{c}</option>
             ))}
-          </div>
+          </select>
         )}
       </div>
 

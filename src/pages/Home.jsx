@@ -340,16 +340,16 @@ export default function Home() {
                     <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Loading cities…</span>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <select
+                    className="input-field"
+                    value={addr.city}
+                    onChange={e => setA('city', e.target.value)}
+                  >
+                    <option value="">Select city…</option>
                     {cities.map(c => (
-                      <div key={c} onClick={() => setA('city', c)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green-pale)' : '#fff', cursor: 'pointer' }}>
-                        <div style={{ width: 15, height: 15, borderRadius: '50%', border: `2px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green)' : '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {addr.city === c && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: addr.city === c ? 'var(--green)' : 'var(--text)' }}>{c}</span>
-                      </div>
+                      <option key={c} value={c}>{c}</option>
                     ))}
-                  </div>
+                  </select>
                 )}
               </div>
 
