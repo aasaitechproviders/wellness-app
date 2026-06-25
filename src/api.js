@@ -51,6 +51,7 @@ export const api = {
   cancelOrder: (id) => req('PUT', `/orders/${id}/cancel`),
 
   // Delivery
+  getCities: () => req('GET', '/delivery/cities'),
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),

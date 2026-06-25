@@ -120,7 +120,7 @@ export default function Setup() {
     deliveryType: 'individual',
     apartmentId: '',
     apartmentName: '', towerNo: '', flatNo: '', landmark: '', pincode: '',
-    city: 'Coimbatore',
+    city: '',
     deliveryPreference: 'Morning',
   })
 
@@ -411,10 +411,25 @@ export default function Setup() {
 
 // ─── STEP 0: Personal & Delivery ─────────────────────────────────────────────
 function Step0({ p, sf }) {
-  const [apts, setApts]       = useState([])
+  const [cities, setCities]       = useState([])
+  const [citiesLoading, setCitiesLoading] = useState(true)
+  const [apts, setApts]           = useState([])
   const [aptSearch, setAptSearch] = useState('')
-  const [aptOpen, setAptOpen] = useState(false)
+  const [aptOpen, setAptOpen]     = useState(false)
   const [aptLoading, setAptLoading] = useState(false)
+
+  // Fetch cities from backend on mount
+  useEffect(() => {
+    api.getCities()
+      .then(d => {
+        const list = d.cities || []
+        setCities(list)
+        // Set default city to first in list if not already set
+        if (list.length > 0 && !list.includes(p.city)) sf('city', list[0])
+      })
+      .catch(() => {})
+      .finally(() => setCitiesLoading(false))
+  }, [])
 
   // Load apartments when Gated Community is selected
   useEffect(() => {
@@ -456,16 +471,23 @@ function Step0({ p, sf }) {
       {/* City */}
       <div>
         <SectionTitle>City</SectionTitle>
-        <div style={{ display:'flex', gap:10, marginTop:10 }}>
-          {['Coimbatore','Chennai'].map(c => (
-            <div key={c} onClick={() => sf('city', c)} style={{ flex:1, display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
-              <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                {p.city===c && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+        {citiesLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <div className="spinner" style={{ width: 18, height: 18 }} />
+            <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Loading cities…</span>
+          </div>
+        ) : (
+          <div style={{ display:'flex', gap:10, marginTop:10 }}>
+            {cities.map(c => (
+              <div key={c} onClick={() => sf('city', c)} style={{ flex:1, display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+                <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${p.city===c?'var(--green)':'var(--border)'}`, background:p.city===c?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  {p.city===c && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
+                </div>
+                <span style={{ fontWeight:600, fontSize:14, color:p.city===c?'var(--green)':'var(--text)' }}>{c}</span>
               </div>
-              <span style={{ fontWeight:600, fontSize:14, color:p.city===c?'var(--green)':'var(--text)' }}>{c}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Delivery type toggle */}

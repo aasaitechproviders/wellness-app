@@ -7,8 +7,6 @@ import BottomNav from '../components/BottomNav'
 import { showToast } from '../components/Toast'
 import logo from '../assets/logo.png'
 
-const CITIES = ['Coimbatore', 'Chennai']
-
 export default function Home() {
   const { family, updateFamily } = useAuth()
   const { addToCart, removeFromCart, isInCart } = useCart()
@@ -21,6 +19,7 @@ export default function Home() {
   // ── Address change sheet state ────────────────────────────────────────────
   const [addrSheet, setAddrSheet]     = useState(false)
   const [addrSaving, setAddrSaving]   = useState(false)
+  const [cities, setCities]           = useState([])
   const [apts, setApts]               = useState([])
   const [aptLoading, setAptLoading]   = useState(false)
   const [aptSearch, setAptSearch]     = useState('')
@@ -68,7 +67,7 @@ export default function Home() {
     const landmark = parts.filter(p => p !== pincode).join(', ')
     setAddr({
       deliveryType,
-      city:          family?.city || 'Coimbatore',
+      city:          family?.city || '',
       apartmentId:   family?.apartmentId || '',
       apartmentName: family?.apartmentName || '',
       towerNo:       family?.towerNo || '',
@@ -78,6 +77,8 @@ export default function Home() {
     })
     setAptSearch('')
     setAptOpen(false)
+    // Fetch cities from backend
+    api.getCities().then(d => setCities(d.cities || [])).catch(() => {})
     setAddrSheet(true)
   }
 
@@ -333,16 +334,23 @@ export default function Home() {
               {/* City */}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-mid)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>City</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {CITIES.map(c => (
-                    <div key={c} onClick={() => setA('city', c)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green-pale)' : '#fff', cursor: 'pointer' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: '50%', border: `2px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green)' : '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {addr.city === c && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                {cities.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="spinner" style={{ width: 16, height: 16 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Loading cities…</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {cities.map(c => (
+                      <div key={c} onClick={() => setA('city', c)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green-pale)' : '#fff', cursor: 'pointer' }}>
+                        <div style={{ width: 15, height: 15, borderRadius: '50%', border: `2px solid ${addr.city === c ? 'var(--green)' : 'var(--border)'}`, background: addr.city === c ? 'var(--green)' : '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {addr.city === c && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: addr.city === c ? 'var(--green)' : 'var(--text)' }}>{c}</span>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: addr.city === c ? 'var(--green)' : 'var(--text)' }}>{c}</span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Delivery type */}
