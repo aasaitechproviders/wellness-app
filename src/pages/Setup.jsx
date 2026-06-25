@@ -335,6 +335,10 @@ export default function Setup() {
           }
         }
 
+        // Refresh auth context with complete family data
+        api.getFamily(family._id)
+          .then(d => { if (d.family) updateFamily(d.family) })
+          .catch(() => {})
         showToast('Profile updated! ✓', 'success')
         nav('/profile', { replace: true })
 
@@ -379,6 +383,10 @@ export default function Setup() {
           })
         }
 
+        // Refresh auth context with complete family data (includes all saved members)
+        api.getFamily(reg.family._id)
+          .then(d => { if (d.family) updateFamily(d.family) })
+          .catch(() => {})
         showToast('Profile saved! 🎉', 'success')
         nav('/home', { replace: true })
       }

@@ -12,6 +12,7 @@ export default function Home() {
   const { addToCart, removeFromCart, isInCart } = useCart()
   const nav = useNavigate()
   const [baskets, setBaskets]         = useState([])
+  const [goals,   setGoals]           = useState([])
   const [recentOrder, setRecentOrder] = useState(null)
   const [activeSub, setActiveSub]     = useState(null)
   const [loading, setLoading]         = useState(true)
@@ -33,30 +34,36 @@ export default function Home() {
   })
 
   useEffect(() => {
-    if (!family) return
-    const members = family?.members || []
-    const goals   = [...new Set(members.flatMap(m => m.wellnessGoals || []))]
-    const basketFetches = goals.length > 0
-      ? goals.map(g => api.getBaskets({ goal: g }).catch(() => ({ baskets: [] })))
-      : [api.getBaskets({ featured: 'true' }).catch(() => ({ baskets: [] }))]
+    if (!family?._id) return
 
-    Promise.all([
-      Promise.all(basketFetches),
-      family?._id ? api.getOrders(family._id).catch(() => ({ orders: [] })) : { orders: [] },
-      family?._id ? api.getSubscriptions(family._id).catch(() => ({ subscriptions: [] })) : { subscriptions: [] },
-    ]).then(([basketResults, o, s]) => {
-      const seen = new Set()
-      const merged = []
-      for (const r of basketResults) {
-        for (const b of (r.baskets || [])) {
-          if (!seen.has(b._id?.toString())) { seen.add(b._id?.toString()); merged.push(b) }
-        }
-      }
-      setBaskets(merged.slice(0, 4))
-      setRecentOrder(o.orders?.[0] || null)
-      setActiveSub(s.subscriptions?.find(x => x.status === 'active') || null)
-    }).finally(() => setLoading(false))
-  }, [family])
+    // Fetch fresh family data (auth context may have stale member/goal data after setup)
+    const freshFamily = api.getFamily(family._id)
+      .then(d => d.family || family)
+      .catch(() => family)
+
+    freshFamily.then(f => {
+      const members  = (f.members || []).filter(m => m.wellnessGoals?.length)
+      const allGoals = [...new Set((f.members || []).flatMap(m => m.wellnessGoals || []))]
+
+      // Use recommendation engine if goals exist, otherwise show all baskets
+      const basketPromise = members.length > 0
+        ? api.recommend({ members })
+            .then(d => (d.recommendation?.baskets || []).slice(0, 4))
+            .catch(() => api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => []))
+        : api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => [])
+
+      Promise.all([
+        basketPromise,
+        api.getOrders(family._id).catch(() => ({ orders: [] })),
+        api.getSubscriptions(family._id).catch(() => ({ subscriptions: [] })),
+      ]).then(([basketArr, o, s]) => {
+        setBaskets(basketArr)
+        setGoals(allGoals)
+        setRecentOrder(o.orders?.[0] || null)
+        setActiveSub(s.subscriptions?.find(x => x.status === 'active') || null)
+      }).finally(() => setLoading(false))
+    })
+  }, [family?._id])
 
   // ── Open address sheet: pre-fill from family ──────────────────────────────
   const openAddrSheet = () => {
@@ -126,7 +133,7 @@ export default function Home() {
   )
 
   const members = family?.members || []
-  const goals   = [...new Set(members.flatMap(m => m.wellnessGoals || []))]
+  // goals computed from fresh family data via setGoals
 
   return (
     <div className="page-shell fade-in">
