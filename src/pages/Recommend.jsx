@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -20,11 +20,15 @@ export default function Recommend() {
   const { family } = useAuth()
   const { addToCart, removeFromCart, isInCart } = useCart()
   const nav        = useNavigate()
-  const [result,   setResult]    = useState(state?.result || null)
-  const [catalog,  setCatalog]   = useState({})
-  const [loading,  setLoading]   = useState(!state?.result)
+  const allRef     = useRef(null)
+
+  const [result,     setResult]     = useState(state?.result || null)
+  const [catalog,    setCatalog]    = useState({})
+  const [loading,    setLoading]    = useState(!state?.result)
   const [allBaskets, setAllBaskets] = useState([])
-  const [browsing, setBrowsing]  = useState(state?.browseAll || false) // show all baskets section
+
+  // If came from "See all →", auto-scroll to All Baskets section
+  const browseAll = state?.browseAll || false
 
   useEffect(() => {
     api.getIngredients({ limit: 141, page: 1 }).then(d => {
@@ -33,7 +37,6 @@ export default function Recommend() {
       setCatalog(m)
     }).catch(() => {})
 
-    // Also load all baskets for the browse section
     api.getBaskets({}).then(d => setAllBaskets(d.baskets || [])).catch(() => {})
 
     if (!result && family?._id) {
@@ -49,198 +52,206 @@ export default function Recommend() {
     }
   }, [])
 
+  // Auto-scroll to All Baskets section when browseAll
+  useEffect(() => {
+    if (browseAll && allRef.current && !loading) {
+      setTimeout(() => allRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    }
+  }, [browseAll, loading])
+
   if (loading) return (
     <div className="page-full center" style={{ minHeight: '100dvh', flexDirection: 'column', gap: 16 }}>
       <div className="spinner" style={{ width: 44, height: 44 }} />
-      <p style={{ color: 'var(--text-light)', fontSize: 14 }}>Building your wellness basket...</p>
+      <p style={{ color: 'var(--text-light)', fontSize: 14 }}>Loading baskets…</p>
     </div>
   )
 
-  if (!result) return (
-    <div className="page-full center" style={{ minHeight: '100dvh', flexDirection: 'column', gap: 16, padding: 28, textAlign: 'center' }}>
-      <div style={{ fontSize: 52 }}>🎯</div>
-      <h2 style={{ fontFamily: 'Playfair Display,serif' }}>No Goals Set</h2>
-      <p style={{ color: 'var(--text-light)', fontSize: 14 }}>Set wellness goals to get a personalised basket</p>
-      <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ width: 200 }}>Set Goals →</button>
-    </div>
-  )
+  const recommendedIds = new Set(result?.baskets?.map(b => b._id?.toString()) || [])
+  const curatedBaskets = result?.baskets || []
+  const otherBaskets   = allBaskets.filter(b => !recommendedIds.has(b._id?.toString()))
 
-  // Basket IDs already recommended — to highlight them in the browse section
-  const recommendedIds = new Set(result.baskets?.map(b => b._id?.toString()) || [])
-
-  // Other baskets not in recommendation
-  const otherBaskets = allBaskets.filter(b => !recommendedIds.has(b._id?.toString()))
-
-  const CartButton = ({ basket }) => {
+  // ── Shared basket card (compact) ─────────────────────────────────────────
+  const BasketCard = ({ basket, featured = false }) => {
     const inCart = isInCart(basket._id)
-    if (inCart) return (
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button
-          onClick={() => nav('/cart')}
-          style={{ flex: 1, padding: '10px 0', background: 'var(--green-pale)', color: 'var(--green)', border: '1.5px solid var(--green)', borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-          ✓ In Cart — View
-        </button>
-        <button
-          onClick={() => { removeFromCart(basket._id); showToast(`${basket.basketName} removed`, 'success') }}
-          style={{ width: 38, height: 38, flexShrink: 0, background: '#FEE2E2', border: 'none', borderRadius: '50%', color: '#DC2626', fontSize: 14, cursor: 'pointer' }}>
-          ✕
-        </button>
+    return (
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        border: featured ? '2px solid var(--green)' : '1.5px solid var(--border)',
+        overflow: 'hidden',
+      }}>
+        {/* Top info row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px 10px' }}>
+          <div style={{
+            width: 52, height: 52, flexShrink: 0,
+            background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)',
+            borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+          }}>🧺</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {basket.wellnessGoal && (
+              <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
+                {basket.wellnessGoal}
+              </div>
+            )}
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, lineHeight: 1.3 }}>{basket.basketName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-light)', lineHeight: 1.4 }}>{basket.description}</div>
+          </div>
+          <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, flexShrink: 0 }}>₹{basket.price}</div>
+        </div>
+
+        {/* Ingredients chips */}
+        {basket.ingredientNames?.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '0 16px 10px' }}>
+            {basket.ingredientNames.slice(0, 4).map(n => (
+              <span key={n} style={{ fontSize: 11, color: 'var(--text-mid)', background: 'var(--bg)', padding: '3px 9px', borderRadius: 50, border: '1px solid var(--border)' }}>
+                {EMJ[n] || '🥗'} {n}
+              </span>
+            ))}
+            {basket.ingredientNames.length > 4 && (
+              <span style={{ fontSize: 11, color: 'var(--text-light)', padding: '3px 6px' }}>+{basket.ingredientNames.length - 4} more</span>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8, padding: '0 16px 14px' }}>
+          <button
+            onClick={() => nav('/basket-detail', { state: { basket } })}
+            style={{ padding: '9px 16px', background: '#fff', color: 'var(--text)', border: '1.5px solid var(--border)', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            Details
+          </button>
+          <div style={{ flex: 1 }}>
+            {inCart ? (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => nav('/cart')}
+                  style={{ flex: 1, padding: '9px 0', background: 'var(--green-pale)', color: 'var(--green)', border: '1.5px solid var(--green)', borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  ✓ In Cart
+                </button>
+                <button
+                  onClick={() => { removeFromCart(basket._id); showToast(`${basket.basketName} removed`, 'success') }}
+                  style={{ width: 36, height: 36, flexShrink: 0, background: '#FEE2E2', border: 'none', borderRadius: '50%', color: '#DC2626', fontSize: 13, cursor: 'pointer' }}>
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { addToCart(basket); showToast(`${basket.basketName} added 🛒`, 'success') }}
+                style={{ width: '100%', padding: '9px 0', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                🛒 Add to Cart
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     )
-    return (
-      <button
-        onClick={() => { addToCart(basket); showToast(`${basket.basketName} added 🛒`, 'success') }}
-        style={{ width: '100%', padding: '10px 0', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-        🛒 Add to Cart
-      </button>
-    )
   }
+
+  // ── Section header ────────────────────────────────────────────────────────
+  const SectionHeader = ({ title, sub, count }) => (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 17, fontWeight: 700 }}>{title}</div>
+        {count != null && <span style={{ fontSize: 12, color: 'var(--text-light)' }}>{count} basket{count !== 1 ? 's' : ''}</span>}
+      </div>
+      {sub && <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 3 }}>{sub}</div>}
+    </div>
+  )
 
   return (
     <div className="page-shell fade-in">
       {/* Header */}
       <div className="top-bar">
         <button className="back-btn" onClick={() => nav(-1)}>←</button>
-        <div className="top-bar-title">Recommended for You</div>
+        <div className="top-bar-title">Baskets</div>
       </div>
 
-      <div className="page-shell-scroll with-nav" style={{ padding: '10px 18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-light)' }}>Personalised based on your wellness goals</p>
+      <div className="page-shell-scroll with-nav" style={{ padding: '14px 18px 100px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-        {/* Goals covered */}
-        {result.goalsCovered?.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {result.goalsCovered.map(g => (
-              <span key={g.goalId} style={{ background: 'var(--green)', color: '#fff', padding: '4px 12px', borderRadius: 50, fontSize: 11, fontWeight: 600 }}>
-                ✓ {g.goalName}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* ── Section 1: Curated Baskets (goal-matched) ───────────────── */}
+        <div>
+          <SectionHeader
+            title="Curated Baskets"
+            sub="Personalised based on your wellness goals"
+            count={curatedBaskets.length}
+          />
 
-        {/* ── Recommended baskets ──────────────────────────────────────── */}
-        {result.baskets?.map(b => (
-          <div key={b._id} style={{ background: '#fff', borderRadius: 16, border: '2px solid var(--green)', overflow: 'hidden' }}>
-            {/* Recommended tag */}
-            <div style={{ background: 'var(--green)', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 11, color: '#fff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>⭐ Recommended for You</span>
-            </div>
-            <div style={{ width: '100%', height: 110, background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 54 }}>🧺</div>
-            <div style={{ padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 3, textTransform: 'uppercase' }}>
-                {b.wellnessGoal || 'Wellness Basket'}
-              </div>
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 17, fontWeight: 700, marginBottom: 3 }}>{b.basketName}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 10 }}>{b.description}</div>
-
-              {b.targetNutrients?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-                  {b.targetNutrients.map(n => (
-                    <span key={n} style={{ background: 'var(--green-pale)', color: 'var(--green)', padding: '3px 9px', borderRadius: 50, fontSize: 11, fontWeight: 600 }}>✓ {n}</span>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 6 }}>Includes</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-                {b.ingredientNames?.slice(0, 5).map(name => {
-                  const ing = catalog[name]
-                  return (
-                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 15 }}>{EMJ[name] || '🥗'}</span>
-                      <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{name}</span>
-                      {ing && <WellnessBadge ingredient={ing} max={1} size="sm" />}
-                    </div>
-                  )
-                })}
-                {b.ingredientNames?.length > 5 && (
-                  <div style={{ fontSize: 12, color: 'var(--text-light)', paddingLeft: 22 }}>
-                    + {b.ingredientNames.length - 5} more items
-                  </div>
-                )}
-              </div>
-
-              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)', marginBottom: 10 }}>₹{b.price}</div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  style={{ flex: 1, padding: '10px 0', background: '#fff', color: 'var(--green)', border: '1.5px solid var(--green)', borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                  onClick={() => nav('/basket-detail', { state: { basket: b } })}>
-                  View Details
-                </button>
-                <div style={{ flex: 1 }}><CartButton basket={b} /></div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* ── Browse Other Baskets ─────────────────────────────────────── */}
-        <div style={{ marginTop: 4 }}>
-          <div
-            onClick={() => setBrowsing(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: '#fff', borderRadius: 14, border: '1px solid var(--border)', cursor: 'pointer' }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Browse All Baskets</div>
-              <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 2 }}>Explore {allBaskets.length} baskets and add what you like</div>
-            </div>
-            <span style={{ fontSize: 18, color: 'var(--green)', fontWeight: 700, transition: 'transform 0.2s', display: 'inline-block', transform: browsing ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
-          </div>
-
-          {browsing && (
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {otherBaskets.length === 0 && allBaskets.length > 0 && (
-                <div style={{ padding: '16px', textAlign: 'center', fontSize: 13, color: 'var(--text-light)', background: '#fff', borderRadius: 12, border: '1px solid var(--border)' }}>
-                  All available baskets are already recommended for you 🎉
-                </div>
-              )}
-              {otherBaskets.map(b => (
-                <div key={b._id} style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <div style={{ width: 52, height: 52, background: 'linear-gradient(135deg,#EBF5EC,#B8DDB8)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>🧺</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {b.wellnessGoal && (
-                        <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>{b.wellnessGoal}</div>
-                      )}
-                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{b.basketName}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-light)', lineHeight: 1.4 }}>{b.description}</div>
-                    </div>
-                    <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, flexShrink: 0 }}>₹{b.price}</div>
-                  </div>
-
-                  {b.ingredientNames?.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {b.ingredientNames.slice(0, 4).map(n => (
-                        <span key={n} style={{ fontSize: 11, color: 'var(--text-mid)', background: 'var(--bg)', padding: '2px 8px', borderRadius: 50, border: '1px solid var(--border)' }}>{EMJ[n] || '🥗'} {n}</span>
-                      ))}
-                      {b.ingredientNames.length > 4 && (
-                        <span style={{ fontSize: 11, color: 'var(--text-light)', padding: '2px 8px' }}>+{b.ingredientNames.length - 4} more</span>
-                      )}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      style={{ padding: '8px 14px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      onClick={() => nav('/basket-detail', { state: { basket: b } })}>
-                      Details
-                    </button>
-                    <div style={{ flex: 1 }}><CartButton basket={b} /></div>
-                  </div>
-                </div>
+          {/* Active goals chips */}
+          {result?.goalsCovered?.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              {result.goalsCovered.map(g => (
+                <span key={g.goalId} style={{ background: 'var(--green)', color: '#fff', padding: '4px 12px', borderRadius: 50, fontSize: 11, fontWeight: 600 }}>
+                  ✓ {g.goalName}
+                </span>
               ))}
+            </div>
+          )}
+
+          {curatedBaskets.length === 0 ? (
+            <div style={{ background: '#fff', borderRadius: 14, border: '1.5px dashed var(--border)', padding: '28px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🎯</div>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>No curated baskets yet</div>
+              <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 16 }}>
+                Set your wellness goals so we can recommend the right baskets for you
+              </div>
+              <button className="btn btn-primary" onClick={() => nav('/goals')} style={{ width: 180 }}>
+                Set Goals →
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {curatedBaskets.map(b => <BasketCard key={b._id} basket={b} featured />)}
             </div>
           )}
         </div>
 
-        {/* Info card */}
-        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', padding: '13px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <span style={{ fontSize: 20 }}>💡</span>
+        {/* ── Divider ─────────────────────────────────────────────────── */}
+        <div ref={allRef} style={{ borderTop: '2px solid var(--border)', position: 'relative' }}>
+          <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'var(--cream)', padding: '0 12px', fontSize: 11, color: 'var(--text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Explore More
+          </span>
+        </div>
+
+        {/* ── Section 2: All Available Baskets ────────────────────────── */}
+        <div>
+          <SectionHeader
+            title="All Available Baskets"
+            sub="Everything we offer — add any to your cart"
+            count={allBaskets.length}
+          />
+
+          {allBaskets.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', fontSize: 13, color: 'var(--text-light)', background: '#fff', borderRadius: 14, border: '1.5px solid var(--border)' }}>
+              <div className="spinner" style={{ width: 24, height: 24, margin: '0 auto 10px' }} />
+              Loading baskets…
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {allBaskets.map(b => {
+                const isRecommended = recommendedIds.has(b._id?.toString())
+                return (
+                  <div key={b._id} style={{ position: 'relative' }}>
+                    {isRecommended && (
+                      <div style={{ position: 'absolute', top: 10, right: 12, zIndex: 1, background: 'var(--green)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 50, letterSpacing: 0.3 }}>
+                        ⭐ In Your Goals
+                      </div>
+                    )}
+                    <BasketCard basket={b} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Tip */}
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <span style={{ fontSize: 18 }}>💡</span>
           <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.7 }}>
             <strong>Tip:</strong> You can add multiple baskets to cart — mix and match for different family members.
           </div>
         </div>
 
-        <div style={{ height: 8 }} />
       </div>
 
       {/* Sticky footer */}
