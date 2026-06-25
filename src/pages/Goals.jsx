@@ -162,9 +162,12 @@ export default function Goals() {
                 width: 34, height: 34, borderRadius: 10,
                 background: sel ? 'rgba(45,106,53,0.12)' : meta.color,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 17,
+                fontSize: 17, overflow: 'hidden',
               }}>
-                {meta.icon}
+                {g.imageUrl
+                  ? <img src={g.imageUrl} alt={g.goalName} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:10 }} />
+                  : meta.icon
+                }
               </div>
 
               <div style={{

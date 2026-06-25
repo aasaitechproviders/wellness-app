@@ -5,20 +5,21 @@ import { api } from '../api'
 import { showToast } from '../components/Toast'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
-const WELLNESS_GOALS = [
-  { id:'Immunity Support',   icon:'🛡️', label:'Immunity Support',   color:'#FFE5E5' },
-  { id:'Weight Management',  icon:'⚖️', label:'Weight Management',  color:'#F3E5F5' },
-  { id:'Protein Support',    icon:'⚡', label:'Protein Support',    color:'#FFF9C4' },
-  { id:'Iron Support',       icon:'💪', label:'Iron Support',       color:'#FFF3E0' },
-  { id:'Heart Wellness',     icon:'❤️', label:'Heart Wellness',     color:'#FCE4EC' },
-  { id:'Diabetes Control',   icon:'💧', label:'Diabetes Support',   color:'#E1F5FE' },
-  { id:'Senior Wellness',    icon:'👴', label:'Senior Wellness',    color:'#EFEBE9' },
-  { id:'Kids Nutrition',     icon:'😊', label:'Kids Growth',        color:'#FFF8E1' },
-  { id:'Digestive Wellness', icon:'🌀', label:'Digestive Wellness', color:'#E8F5E9' },
-  { id:'Detox',              icon:'✨', label:'Detox',              color:'#FFFDE7' },
-  { id:'Bone Health',        icon:'🦴', label:'Bone Health',        color:'#F3E5F5' },
-  { id:'General Wellness',   icon:'🌿', label:'General Wellness',   color:'#E8F5E9' },
-]
+// Emoji + color fallback for goals that don't have an admin-uploaded image
+const GOAL_META = {
+  'Immunity Support':   { icon:'🛡️', color:'#FFE5E5' },
+  'Weight Management':  { icon:'⚖️', color:'#F3E5F5' },
+  'Protein Support':    { icon:'⚡', color:'#FFF9C4' },
+  'Iron Support':       { icon:'💪', color:'#FFF3E0' },
+  'Heart Wellness':     { icon:'❤️', color:'#FCE4EC' },
+  'Diabetes Control':   { icon:'💧', color:'#E1F5FE' },
+  'Senior Wellness':    { icon:'👴', color:'#EFEBE9' },
+  'Kids Nutrition':     { icon:'😊', color:'#FFF8E1' },
+  'Digestive Wellness': { icon:'🌀', color:'#E8F5E9' },
+  'Detox':              { icon:'✨', color:'#FFFDE7' },
+  'Bone Health':        { icon:'🦴', color:'#F3E5F5' },
+  'General Wellness':   { icon:'🌿', color:'#E8F5E9' },
+}
 
 
 const TASTE_PREFS  = ['Sweet','Mild','Tangy','Spicy','Bitter']
@@ -811,9 +812,15 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
 function Step2({ members, active, setActive, smfToggle }) {
   const m = members[active]
   const goalsCount = m?.wellnessGoals?.length || 0
+  const [wellnessGoals,     setWellnessGoals]     = useState([])
+  const [goalsLoading,      setGoalsLoading]      = useState(true)
   const [healthChallengeOptions, setHealthChallengeOptions] = useState([])
 
   useEffect(() => {
+    api.getGoals()
+      .then(d => setWellnessGoals(d.goals || []))
+      .catch(() => {})
+      .finally(() => setGoalsLoading(false))
     api.getHealthChallenges()
       .then(d => setHealthChallengeOptions(d.challenges || []))
       .catch(() => {})
@@ -843,33 +850,46 @@ function Step2({ members, active, setActive, smfToggle }) {
         <span style={{ fontSize:12, color: goalsCount >= 3 ? '#DC2626' : 'var(--text-light)' }}>{goalsCount}/3 selected</span>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-        {WELLNESS_GOALS.map(g => {
-          const sel = m?.wellnessGoals?.includes(g.id) || false
-          const disabled = !sel && goalsCount >= 3
-          return (
-            <div key={g.id}
-              onClick={() => !disabled && smfToggle('wellnessGoals', g.id)}
-              style={{
-                position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                padding:'12px 8px 10px', gap:6,
-                background: sel ? 'var(--green-pale)' : '#fff',
-                border:`1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`,
-                borderRadius:12, minHeight:80,
-                opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
-                transition:'all 0.15s',
-              }}>
-              {sel && (
-                <div style={{ position:'absolute', top:6, right:6, width:16, height:16, borderRadius:'50%', background:'var(--green)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <span style={{ color:'#fff', fontSize:9, fontWeight:900, lineHeight:1 }}>✓</span>
+      {goalsLoading ? (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 0', gap:10 }}>
+          <div className="spinner" style={{ width:22, height:22 }} />
+          <span style={{ fontSize:13, color:'var(--text-light)' }}>Loading goals…</span>
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {wellnessGoals.map(g => {
+            const meta     = GOAL_META[g.goalName] || { icon:'🌿', color:'#E8F5E9' }
+            const sel      = m?.wellnessGoals?.includes(g.goalName) || false
+            const disabled = !sel && goalsCount >= 3
+            return (
+              <div key={g.goalId || g.goalName}
+                onClick={() => !disabled && smfToggle('wellnessGoals', g.goalName)}
+                style={{
+                  position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                  padding:'12px 8px 10px', gap:6,
+                  background: sel ? 'var(--green-pale)' : '#fff',
+                  border:`1.5px solid ${sel ? 'var(--green)' : 'var(--border)'}`,
+                  borderRadius:12, minHeight:80,
+                  opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
+                  transition:'all 0.15s',
+                }}>
+                {sel && (
+                  <div style={{ position:'absolute', top:6, right:6, width:16, height:16, borderRadius:'50%', background:'var(--green)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ color:'#fff', fontSize:9, fontWeight:900, lineHeight:1 }}>✓</span>
+                  </div>
+                )}
+                <div style={{ width:34, height:34, borderRadius:10, background: sel ? 'rgba(45,106,53,0.12)' : meta.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, overflow:'hidden' }}>
+                  {g.imageUrl
+                    ? <img src={g.imageUrl} alt={g.goalName} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:10 }} />
+                    : meta.icon
+                  }
                 </div>
-              )}
-              <div style={{ width:34, height:34, borderRadius:10, background: sel ? 'rgba(45,106,53,0.12)' : g.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{g.icon}</div>
-              <div style={{ fontSize:11, fontWeight:600, color: sel ? 'var(--green)' : 'var(--text)', textAlign:'center', lineHeight:1.3 }}>{g.label}</div>
-            </div>
-          )
-        })}
-      </div>
+                <div style={{ fontSize:11, fontWeight:600, color: sel ? 'var(--green)' : 'var(--text)', textAlign:'center', lineHeight:1.3 }}>{g.goalName}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Health challenges */}
       <div style={{ marginTop:20 }}>
