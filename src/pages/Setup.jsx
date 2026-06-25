@@ -103,7 +103,7 @@ export default function Setup() {
   // Edit mode: came from Profile (state.editMode) OR family already registered (profileComplete) OR has members
   const isEditMode = !!(locationState?.editMode || family?.profileComplete || family?.members?.length > 0)
 
-  const [step, setStep]     = useState(isEditMode ? 1 : 0)
+  const [step, setStep]     = useState(0)  // always start at step 0; pre-fill runs for edit mode
   const [saving, setSaving] = useState(false)
   const [prefillLoading, setPrefillLoading] = useState(isEditMode)
 
@@ -415,32 +415,20 @@ export default function Setup() {
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
           <button
             onClick={() => {
-              if (isEditMode) {
-                if (step <= 1) nav('/profile')
-                else setStep(s => s - 1)
-              } else {
-                if (step === 0) nav(-1)
-                else setStep(s => s - 1)
-              }
+              if (step === 0) { isEditMode ? nav('/profile') : nav(-1) }
+              else setStep(s => s - 1)
             }}
             style={{ width:34, height:34, borderRadius:'50%', background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
           >←</button>
           <div>
             <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>
-              {isEditMode
-                ? `Step ${step - 1 + 1} of ${STEPS.length - 1}`
-                : `Step ${step + 1} of ${STEPS.length}`}
+              {isEditMode ? `Edit Profile · Step ${step + 1} of ${STEPS.length}` : `Step ${step + 1} of ${STEPS.length}`}
             </div>
             <div style={{ color:'#fff', fontFamily:'Playfair Display,serif', fontSize:19, fontWeight:600 }}>{STEPS[step]}</div>
           </div>
         </div>
         <div style={{ height:4, background:'rgba(255,255,255,0.2)', borderRadius:2 }}>
-          {(() => {
-            const pct = isEditMode
-              ? ((step - 1 + 1) / (STEPS.length - 1)) * 100
-              : ((step + 1) / STEPS.length) * 100
-            return <div style={{ height:'100%', background:'#fff', borderRadius:2, width:`${pct}%`, transition:'width 0.35s ease' }}/>
-          })()}
+          <div style={{ height:'100%', background:'#fff', borderRadius:2, width:`${((step+1)/STEPS.length)*100}%`, transition:'width 0.35s ease' }}/>
         </div>
       </div>
 
