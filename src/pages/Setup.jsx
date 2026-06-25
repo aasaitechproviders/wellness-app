@@ -168,11 +168,12 @@ export default function Setup() {
 
           return {
             ...emptyMember(),
-            _existingId:    m.memberId,   // flag to know this already exists in DB
+            _existingId:    m.memberId,
             name:           m.name || '',
             age:            m.age?.toString() || '',
             gender:         m.gender || 'Female',
             wellnessGoals:  m.wellnessGoals || [],
+            healthChallenges: m.healthChallenges || [],
             dietaryRestrictions: restrictions,
             dislikedVeg,
             dislikedFruit,
@@ -284,6 +285,7 @@ export default function Setup() {
               age:           parseInt(m.age) || null,
               gender:        m.gender,
               wellnessGoals: m.wellnessGoals,
+              healthChallenges: m.healthChallenges || [],
               dietaryRestrictions: [
                 ...m.dislikedVeg.map(v => `No ${v}`),
                 ...m.dislikedFruit.map(v => `No ${v}`),
@@ -296,6 +298,7 @@ export default function Setup() {
               age:           parseInt(m.age) || null,
               gender:        m.gender,
               wellnessGoals: m.wellnessGoals,
+              healthChallenges: m.healthChallenges || [],
               dietaryRestrictions: [
                 ...m.dislikedVeg.map(v => `No ${v}`),
                 ...m.dislikedFruit.map(v => `No ${v}`),
@@ -331,6 +334,7 @@ export default function Setup() {
             age:           parseInt(m.age) || null,
             gender:        m.gender,
             wellnessGoals: m.wellnessGoals,
+            healthChallenges: m.healthChallenges || [],
             dietaryRestrictions: [
               ...m.dislikedVeg.map(v => `No ${v}`),
               ...m.dislikedFruit.map(v => `No ${v}`),
@@ -802,14 +806,12 @@ function Step2({ members, active, setActive, smfToggle }) {
       <div style={{ marginTop:20 }}>
         <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>Current Health Challenges</div>
         <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>Optional — helps us personalise better</div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-          {HEALTH_CHALLENGES.map(hc => {
-            const sel = m?.healthChallenges?.includes(hc) || false
-            return (
-              <button key={hc} onClick={() => smfToggle('healthChallenges', hc)} style={{ padding:'6px 12px', borderRadius:50, fontSize:12, fontWeight:600, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', color:sel?'#fff':'var(--text)', cursor:'pointer' }}>{hc}</button>
-            )
-          })}
-        </div>
+        <SearchChipSelect
+          items={HEALTH_CHALLENGES}
+          selected={m?.healthChallenges || []}
+          onToggle={(hc) => smfToggle('healthChallenges', hc)}
+          placeholder="Search challenges…"
+        />
       </div>
     </div>
   )
@@ -887,57 +889,27 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
             {/* Disliked Vegetables */}
-            <div style={{ background:'#fff', borderRadius:14, border:'1px solid var(--border)', overflow:'hidden' }}>
-              <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--border)', background:'var(--cream)' }}>
-                <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>Disliked Vegetables</div>
-                <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>Select items to avoid — these will be excluded from your basket</div>
-              </div>
-              <div style={{ padding:'8px 0' }}>
-                {DISLIKED_VEG.map((v, i) => {
-                  const sel = m?.dislikedVeg?.includes(v) || false
-                  return (
-                    <div key={v} onClick={() => smfToggle('dislikedVeg', v)} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderBottom: i < DISLIKED_VEG.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer', background: sel ? 'var(--green-pale)' : '#fff', transition:'background 0.1s' }}>
-                      <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
-                        {sel && <span style={{ color:'#fff', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
-                      </div>
-                      <span style={{ fontSize:14, fontWeight:sel?600:400, color:sel?'var(--green)':'var(--text)' }}>{v}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              {(m?.dislikedVeg?.length > 0) && (
-                <div style={{ padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--green-pale)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>{m.dislikedVeg.length} vegetable{m.dislikedVeg.length > 1 ? 's' : ''} to avoid</span>
-                  <button onClick={e => { e.stopPropagation(); smf('dislikedVeg', []) }} style={{ fontSize:11, color:'var(--text-light)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Clear</button>
-                </div>
-              )}
+            <div>
+              <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', marginBottom:4 }}>Disliked Vegetables</div>
+              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Select items to avoid — these will be excluded from your basket</div>
+              <SearchChipSelect
+                items={DISLIKED_VEG}
+                selected={m?.dislikedVeg || []}
+                onToggle={(v) => smfToggle('dislikedVeg', v)}
+                placeholder="Search vegetables…"
+              />
             </div>
 
             {/* Fruit Restrictions */}
-            <div style={{ background:'#fff', borderRadius:14, border:'1px solid var(--border)', overflow:'hidden' }}>
-              <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--border)', background:'var(--cream)' }}>
-                <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>Fruit Restrictions</div>
-                <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>Select fruits to avoid</div>
-              </div>
-              <div style={{ padding:'8px 0' }}>
-                {DISLIKED_FRU.map((f, i) => {
-                  const sel = m?.dislikedFruit?.includes(f) || false
-                  return (
-                    <div key={f} onClick={() => smfToggle('dislikedFruit', f)} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderBottom: i < DISLIKED_FRU.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer', background: sel ? 'var(--green-pale)' : '#fff', transition:'background 0.1s' }}>
-                      <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
-                        {sel && <span style={{ color:'#fff', fontSize:11, fontWeight:900, lineHeight:1 }}>✓</span>}
-                      </div>
-                      <span style={{ fontSize:14, fontWeight:sel?600:400, color:sel?'var(--green)':'var(--text)' }}>Avoid {f}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              {(m?.dislikedFruit?.length > 0) && (
-                <div style={{ padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--green-pale)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>{m.dislikedFruit.length} fruit{m.dislikedFruit.length > 1 ? 's' : ''} to avoid</span>
-                  <button onClick={e => { e.stopPropagation(); smf('dislikedFruit', []) }} style={{ fontSize:11, color:'var(--text-light)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Clear</button>
-                </div>
-              )}
+            <div>
+              <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', marginBottom:4 }}>Fruit Restrictions</div>
+              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Select fruits to avoid</div>
+              <SearchChipSelect
+                items={DISLIKED_FRU}
+                selected={m?.dislikedFruit || []}
+                onToggle={(f) => smfToggle('dislikedFruit', f)}
+                placeholder="Search fruits…"
+              />
             </div>
 
           </div>
@@ -1076,5 +1048,55 @@ function ToggleChip({ label, selected, onToggle }) {
     <button onClick={onToggle} style={{ padding:'6px 12px', borderRadius:50, fontSize:12, fontWeight:600, border:`1.5px solid ${selected?'var(--green)':'var(--border)'}`, background:selected?'var(--green)':'#fff', color:selected?'#fff':'var(--text)', cursor:'pointer', transition:'all 0.15s' }}>
       {selected ? '✓ ' : ''}{label}
     </button>
+  )
+}
+
+function SearchChipSelect({ items, selected, onToggle, placeholder = 'Search…' }) {
+  const [q, setQ] = useState('')
+  const filtered = items.filter(i => i.toLowerCase().includes(q.toLowerCase()))
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {/* Search box */}
+      <div style={{ position:'relative' }}>
+        <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:14, pointerEvents:'none' }}>🔍</span>
+        <input
+          className="input-field"
+          style={{ paddingLeft:36 }}
+          placeholder={placeholder}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+        />
+      </div>
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+          {selected.map(s => (
+            <span
+              key={s}
+              onClick={() => onToggle(s)}
+              style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:50, fontSize:12, fontWeight:600, background:'var(--green)', color:'#fff', cursor:'pointer' }}
+            >
+              {s}
+              <span style={{ fontSize:10, opacity:0.8 }}>✕</span>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Unselected filtered items */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+        {filtered.filter(i => !selected.includes(i)).map(item => (
+          <button
+            key={item}
+            onClick={() => onToggle(item)}
+            style={{ padding:'6px 14px', borderRadius:50, fontSize:12, fontWeight:500, border:'1.5px solid var(--border)', background:'#fff', color:'var(--text)', cursor:'pointer', transition:'all 0.15s', fontFamily:'var(--font-body)' }}
+          >
+            {item}
+          </button>
+        ))}
+        {filtered.filter(i => !selected.includes(i)).length === 0 && q && (
+          <div style={{ fontSize:12, color:'var(--text-light)', padding:'4px 0' }}>No results for "{q}"</div>
+        )}
+      </div>
+    </div>
   )
 }
