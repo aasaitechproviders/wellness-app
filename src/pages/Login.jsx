@@ -70,8 +70,10 @@ export default function Login() {
 
         {/* Phone input */}
         <div className="input-wrap">
-          <label className="input-label">Mobile Number</label>
-          <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 4, marginTop: -2 }}>Enter your mobile number to get started</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 5 }}>
+            <label className="input-label" style={{ marginBottom: 0 }}>Mobile Number</label>
+            <span style={{ fontSize: 11, color: 'var(--text-light)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>(Enter your mobile number to get started)</span>
+          </div>
           <div style={{ position: 'relative' }}>
             <span style={{
               position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
