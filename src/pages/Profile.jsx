@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 import { showToast } from '../components/Toast'
 import BottomNav from '../components/BottomNav'
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 
 const GOAL_ICONS = {
   'Immunity Support':'🛡️','Iron Support':'💪','Protein Support':'⚡',

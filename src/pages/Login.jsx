@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { showToast } from '../components/Toast'
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 
 export default function Login() {
   const [phone, setPhone]       = useState('')

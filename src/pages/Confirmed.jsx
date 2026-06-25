@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 import BottomNav from '../components/BottomNav'
 
 export default function Confirmed() {

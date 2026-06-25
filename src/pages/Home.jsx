@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext'
 import { api } from '../api'
 import BottomNav from '../components/BottomNav'
 import { showToast } from '../components/Toast'
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 
 const CITIES = ['Coimbatore', 'Chennai']
 

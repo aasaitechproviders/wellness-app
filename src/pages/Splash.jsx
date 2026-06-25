@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 
 export default function Splash() {
   const { family, loading } = useAuth()
