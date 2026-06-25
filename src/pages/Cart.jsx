@@ -120,7 +120,7 @@ export default function Cart() {
                       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6, flexShrink:0 }}>
                         <button onClick={() => { removeFromCart(b._id); showToast(`${b.basketName} removed`, 'success') }}
                           style={{ width:26, height:26, borderRadius:'50%', background:'#FEE2E2', border:'none', color:'#DC2626', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-                        <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, fontWeight:700, color:'var(--green)' }}>₹{b.price}</div>
+                        <div style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>₹{b.price}</div>
                       </div>
                     </div>
 
@@ -207,7 +207,7 @@ export default function Cart() {
                   <div style={{ fontWeight:700, fontSize:15 }}>Total</div>
                   <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2 }}>{cartCount} basket{cartCount > 1 ? 's' : ''}</div>
                 </div>
-                <div style={{ fontFamily:'Playfair Display,serif', fontSize:26, fontWeight:700, color:'var(--green)' }}>₹{cartTotal}</div>
+                <div style={{ fontSize:26, fontWeight:700, color:'var(--green)' }}>₹{cartTotal}</div>
               </div>
             </div>
 

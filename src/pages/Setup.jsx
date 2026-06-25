@@ -711,7 +711,7 @@ function Step1({ members, active, setActive, addMember, remMember, smf }) {
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: recRange ? 10 : 0 }}>
                   <div>
                     <div style={{ fontSize:11, color:'var(--text-light)', fontWeight:600, textTransform:'uppercase', letterSpacing:0.4 }}>BMI</div>
-                    <div style={{ fontWeight:700, fontSize:22, color, fontFamily:'Playfair Display,serif', marginTop:2 }}>{bmi}</div>
+                    <div style={{ fontWeight:700, fontSize:22, color, marginTop:2 }}>{bmi}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
                     <span style={{ background: color, color:'#fff', padding:'4px 12px', borderRadius:50, fontSize:12, fontWeight:700 }}>{bmiCategory(bmi)}</span>
@@ -999,7 +999,7 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
                   </div>
                   {plan.price && (
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontWeight:700, fontSize:14, color:sel?'var(--green)':'var(--text)', fontFamily:'Playfair Display,serif' }}>₹{plan.price}</div>
+                      <div style={{ fontWeight:700, fontSize:14, color:sel?'var(--green)':'var(--text)' }}>₹{plan.price}</div>
                       {plan.duration && <div style={{ fontSize:10, color:'var(--text-light)', marginTop:1 }}>{durationLabel}</div>}
                     </div>
                   )}

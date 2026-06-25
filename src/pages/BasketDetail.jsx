@@ -161,7 +161,7 @@ export default function BasketDetail() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>₹{basket.price}</div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>₹{basket.price}</div>
                 <button onClick={() => setView('customize')} style={{ background: 'none', border: '1px solid var(--green)', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '7px 16px', borderRadius: 50 }}>Customise →</button>
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function BasketDetail() {
                     <div style={{ fontWeight: 700, fontSize: 15 }}>Total</div>
                     <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 2 }}>{activeItems.length} items · {totalWeight}g</div>
                   </div>
-                  <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>₹{displayPrice}</div>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>₹{displayPrice}</div>
                 </div>
               </div>
             </div>

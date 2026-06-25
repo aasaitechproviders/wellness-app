@@ -54,7 +54,7 @@ export default function ReviewOrder() {
                       {b.wellnessGoal && <div style={{ fontSize:11, color:'var(--text-light)', marginTop:1 }}>✓ {b.wellnessGoal}</div>}
                     </div>
                   </div>
-                  <div style={{ fontWeight:700, fontSize:14, color:'var(--green)', fontFamily:'Playfair Display,serif' }}>₹{b.price}</div>
+                  <div style={{ fontWeight:700, fontSize:14, color:'var(--green)' }}>₹{b.price}</div>
                 </div>
                 {b.assignedMemberId && b._assignedName && (
                   <div style={{ fontSize:11, color:'var(--text-mid)', marginLeft:30 }}>For: {b._assignedName}</div>
@@ -130,7 +130,7 @@ export default function ReviewOrder() {
           )}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <span style={{ fontWeight:700, fontSize:15 }}>Total Amount</span>
-            <span style={{ fontFamily:'Playfair Display,serif', fontSize:28, fontWeight:700, color:'var(--green)' }}>₹{total}</span>
+            <span style={{ fontSize:28, fontWeight:700, color:'var(--green)' }}>₹{total}</span>
           </div>
         </div>
       </div>

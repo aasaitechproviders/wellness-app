@@ -243,7 +243,7 @@ export default function Home() {
                       {b.wellnessGoal && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--green-pale)', color: 'var(--green)', padding: '2px 8px', borderRadius: 50, fontSize: 10, fontWeight: 600, marginBottom: 8 }}>✓ {b.wellnessGoal}</div>
                       )}
-                      <div style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, color: 'var(--green)', fontSize: 16, marginBottom: 10 }}>₹{b.price}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, marginBottom: 10 }}>₹{b.price}</div>
 
                       {/* Add / Remove from Cart */}
                       {inCart ? (
@@ -290,7 +290,7 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-light)' }}>{recentOrder.items?.length || 0} items</span>
-                <span style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, fontFamily: 'Playfair Display,serif' }}>₹{recentOrder.totalAmount}</span>
+                <span style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16 }}>₹{recentOrder.totalAmount}</span>
               </div>
             </div>
           </div>

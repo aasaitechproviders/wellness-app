@@ -160,7 +160,7 @@ export default function Recommend() {
                 )}
               </div>
 
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 22, fontWeight: 700, color: 'var(--green)', marginBottom: 10 }}>₹{b.price}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)', marginBottom: 10 }}>₹{b.price}</div>
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -204,7 +204,7 @@ export default function Recommend() {
                       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{b.basketName}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-light)', lineHeight: 1.4 }}>{b.description}</div>
                     </div>
-                    <div style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, color: 'var(--green)', fontSize: 16, flexShrink: 0 }}>₹{b.price}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, flexShrink: 0 }}>₹{b.price}</div>
                   </div>
 
                   {b.ingredientNames?.length > 0 && (

@@ -58,7 +58,7 @@ export default function Plans() {
               <div style={{ fontSize:12, color:'var(--text-light)' }}>{p.days} Days · {p.desc}</div>
             </div>
             <div style={{ textAlign:'right', marginRight:12 }}>
-              <div style={{ fontFamily:'Playfair Display,serif', fontSize:22, fontWeight:700, color:sel===p.id?'var(--green)':'var(--text)' }}>₹{p.price}</div>
+              <div style={{ fontSize:22, fontWeight:700, color:sel===p.id?'var(--green)':'var(--text)' }}>₹{p.price}</div>
               <div style={{ fontSize:11, color:'var(--text-light)' }}>{p.per}</div>
             </div>
             <div className="plan-radio"/>

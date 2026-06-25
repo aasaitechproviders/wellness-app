@@ -63,7 +63,7 @@ export function Orders() {
                 )}
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:13, color:'var(--text-light)' }}>{order.items?.length || 0} items</span>
-                  <span style={{ fontWeight:700, color:'var(--green)', fontSize:17, fontFamily:'Playfair Display,serif' }}>
+                  <span style={{ fontWeight:700, color:'var(--green)', fontSize:17 }}>
                     ₹{order.totalAmount}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export function OrderDetail() {
         <div className="card">
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <span style={{ fontWeight:600, fontSize:15 }}>Total Amount</span>
-            <span style={{ fontFamily:'Playfair Display,serif', fontSize:24, fontWeight:700, color:'var(--green)' }}>₹{order.totalAmount}</span>
+            <span style={{ fontSize:24, fontWeight:700, color:'var(--green)' }}>₹{order.totalAmount}</span>
           </div>
           <div style={{ fontSize:13, color:'var(--text-light)', marginTop:6 }}>Payment: {order.paymentMethod}</div>
         </div>
