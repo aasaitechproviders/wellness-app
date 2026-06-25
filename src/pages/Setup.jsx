@@ -25,11 +25,8 @@ const HEALTH_CHALLENGES = [
   'Frequent Illness','Obesity','Underweight','Constipation','Poor Appetite','Cholesterol','None',
 ]
 
-const DISLIKED_VEG = ['Bitter Gourd','Brinjal','Radish','Turnip','Raw Papaya','Pumpkin','Drumstick','Cluster Beans','French Beans','Raw Banana','Raw Mango','Colocasia (Arbi)','Snake Gourd','Ridge Gourd','Ash Gourd']
-const DISLIKED_FRU = ['Banana','Mango','Grapes','Pineapple','Papaya','Jackfruit','Custard Apple','Dates','Chikoo (Sapota)']
 const TASTE_PREFS  = ['Sweet','Mild','Tangy','Spicy','Bitter']
 const COOK_PREFS   = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
-const MICROGREEN_TYPES = ['Sunflower','Broccoli','Pea Shoots','Radish','Mustard','Mixed Microgreens']
 const ALLERGIES    = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance','None']
 
 const STEPS = [
@@ -98,8 +95,6 @@ function emptyMember() {
     hasVegFruitRestriction: null,   // null = unanswered, true = yes, false = no
     dislikedVeg: [], dislikedFruit: [],
     tastePref: [], cookPref: [],
-    microgreenExperience: 'New User',
-    microgreenInterest: [],
     allergies: [],
   }
 }
@@ -161,10 +156,10 @@ export default function Setup() {
       if (f.members?.length) {
         const prefilled = f.members.map(m => {
           // Parse dietaryRestrictions back to dislikedVeg / dislikedFruit / allergies
-          const restrictions = m.dietaryRestrictions || []
-          const dislikedVeg  = restrictions.filter(r => r.startsWith('No ') && DISLIKED_VEG.includes(r.slice(3))).map(r => r.slice(3))
-          const dislikedFruit= restrictions.filter(r => r.startsWith('No ') && DISLIKED_FRU.includes(r.slice(3))).map(r => r.slice(3))
-          const allergies    = restrictions.filter(r => !r.startsWith('No ') || (!DISLIKED_VEG.includes(r.slice(3)) && !DISLIKED_FRU.includes(r.slice(3))))
+          const restrictions  = m.dietaryRestrictions || []
+          const dislikedVeg   = m.dislikedVeg   || []
+          const dislikedFruit = m.dislikedFruit || []
+          const allergies     = restrictions.filter(r => !r.startsWith('No '))
 
           return {
             ...emptyMember(),
@@ -172,6 +167,8 @@ export default function Setup() {
             name:           m.name || '',
             age:            m.age?.toString() || '',
             gender:         m.gender || 'Female',
+            height:         m.height?.toString() || '',
+            weight:         m.weight?.toString() || '',
             wellnessGoals:  m.wellnessGoals || [],
             healthChallenges: m.healthChallenges || [],
             dietaryRestrictions: restrictions,
@@ -265,15 +262,16 @@ export default function Setup() {
       if (isEditMode && family?._id) {
         // ── EDIT MODE: update existing family ──────────────────────────────
         const updated = await api.updateFamily(family._id, {
-          apartmentId:    profile.apartmentId || undefined,
-          apartmentName:  profile.apartmentName,
-          towerNo:        profile.towerNo || undefined,
-          flatNo:         profile.flatNo,
-          address:        profile.deliveryType === 'individual'
+          apartmentId:       profile.apartmentId || undefined,
+          apartmentName:     profile.apartmentName,
+          towerNo:           profile.towerNo || undefined,
+          flatNo:            profile.flatNo,
+          address:           profile.deliveryType === 'individual'
             ? [profile.landmark, profile.pincode].filter(Boolean).join(', ')
             : profile.apartmentName,
-          city:           profile.city,
-          dietPreference: members[0]?.dietType || 'Vegetarian',
+          city:              profile.city,
+          dietPreference:    members[0]?.dietType || 'Vegetarian',
+          deliveryPreference: profile.deliveryPreference || 'Morning',
         })
         updateFamily(updated.family)
 
@@ -284,26 +282,26 @@ export default function Setup() {
               name:          m.name,
               age:           parseInt(m.age) || null,
               gender:        m.gender,
+              height:        parseFloat(m.height) || null,
+              weight:        parseFloat(m.weight) || null,
               wellnessGoals: m.wellnessGoals,
               healthChallenges: m.healthChallenges || [],
-              dietaryRestrictions: [
-                ...m.dislikedVeg.map(v => `No ${v}`),
-                ...m.dislikedFruit.map(v => `No ${v}`),
-                ...m.allergies.filter(a => a !== 'None'),
-              ],
+              dislikedVeg:   m.dislikedVeg   || [],
+              dislikedFruit: m.dislikedFruit || [],
+              dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
             })
           } else {
             await api.addMember(family._id, {
               name:          m.name,
               age:           parseInt(m.age) || null,
               gender:        m.gender,
+              height:        parseFloat(m.height) || null,
+              weight:        parseFloat(m.weight) || null,
               wellnessGoals: m.wellnessGoals,
               healthChallenges: m.healthChallenges || [],
-              dietaryRestrictions: [
-                ...m.dislikedVeg.map(v => `No ${v}`),
-                ...m.dislikedFruit.map(v => `No ${v}`),
-                ...m.allergies.filter(a => a !== 'None'),
-              ],
+              dislikedVeg:   m.dislikedVeg   || [],
+              dislikedFruit: m.dislikedFruit || [],
+              dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
             })
           }
         }
@@ -314,17 +312,18 @@ export default function Setup() {
       } else {
         // ── NEW REGISTRATION ───────────────────────────────────────────────
         const reg = await api.registerFamily({
-          familyName:    `Family-${localStorage.getItem('kp_phone') || 'User'}`,
-          email:         profile.email || undefined,
-          apartmentId:   profile.apartmentId || undefined,
-          apartmentName: profile.apartmentName,
-          towerNo:       profile.towerNo || undefined,
-          flatNo:        profile.flatNo,
-          address:       profile.deliveryType === 'individual'
+          familyName:        `Family-${localStorage.getItem('kp_phone') || 'User'}`,
+          email:             profile.email || undefined,
+          apartmentId:       profile.apartmentId || undefined,
+          apartmentName:     profile.apartmentName,
+          towerNo:           profile.towerNo || undefined,
+          flatNo:            profile.flatNo,
+          address:           profile.deliveryType === 'individual'
             ? [profile.landmark, profile.pincode].filter(Boolean).join(', ')
             : profile.apartmentName,
-          city:          profile.city,
-          dietPreference: members[0]?.dietType || 'Vegetarian',
+          city:              profile.city,
+          dietPreference:    members[0]?.dietType || 'Vegetarian',
+          deliveryPreference: profile.deliveryPreference || 'Morning',
         })
         updateFamily(reg.family)
 
@@ -333,13 +332,13 @@ export default function Setup() {
             name:          m.name,
             age:           parseInt(m.age) || null,
             gender:        m.gender,
+            height:        parseFloat(m.height) || null,
+            weight:        parseFloat(m.weight) || null,
             wellnessGoals: m.wellnessGoals,
             healthChallenges: m.healthChallenges || [],
-            dietaryRestrictions: [
-              ...m.dislikedVeg.map(v => `No ${v}`),
-              ...m.dislikedFruit.map(v => `No ${v}`),
-              ...m.allergies.filter(a => a !== 'None'),
-            ],
+            dislikedVeg:   m.dislikedVeg   || [],
+            dislikedFruit: m.dislikedFruit || [],
+            dietaryRestrictions: m.allergies.filter(a => a !== 'None'),
           })
         }
 
@@ -822,14 +821,34 @@ function Step2({ members, active, setActive, smfToggle }) {
 // ─── STEP 3: Food Preferences ─────────────────────────────────────────────────
 function Step3({ members, active, setActive, smf, smfToggle }) {
   const m = members[active]
-  const [plans, setPlans]           = useState([])
+  const [plans, setPlans]               = useState([])
   const [plansLoading, setPlansLoading] = useState(true)
+  const [vegItems, setVegItems]         = useState([])
+  const [fruitItems, setFruitItems]     = useState([])
+  const [ingrLoading, setIngrLoading]   = useState(true)
 
   useEffect(() => {
     api.getPlans()
       .then(d => setPlans(d.plans || []))
       .catch(() => {})
       .finally(() => setPlansLoading(false))
+  }, [])
+
+  useEffect(() => {
+    api.getIngredients({ limit: 200, page: 1 })
+      .then(d => {
+        const all = d.ingredients || []
+        setVegItems(
+          all.filter(i => ['Vegetable','Leafy Vegetables','Leafy','Greens'].includes(i.category))
+             .map(i => i.name).sort()
+        )
+        setFruitItems(
+          all.filter(i => ['Fruit','Fruits'].includes(i.category))
+             .map(i => i.name).sort()
+        )
+      })
+      .catch(() => {})
+      .finally(() => setIngrLoading(false))
   }, [])
 
   return (
@@ -890,28 +909,24 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
         {m?.hasVegFruitRestriction === true && (
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
-            {/* Disliked Vegetables */}
+            {/* Disliked Vegetables — loaded from DB */}
             <div>
-              <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', marginBottom:4 }}>Disliked Vegetables</div>
-              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Select items to avoid — these will be excluded from your basket</div>
-              <SearchChipSelect
-                items={DISLIKED_VEG}
-                selected={m?.dislikedVeg || []}
-                onToggle={(v) => smfToggle('dislikedVeg', v)}
-                placeholder="Search vegetables…"
-              />
+              <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', marginBottom:4 }}>Disliked Vegetables & Greens</div>
+              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Search from our product list — selected ones will be excluded from your basket</div>
+              {ingrLoading
+                ? <div style={{ display:'flex', alignItems:'center', gap:8 }}><div className="spinner" style={{ width:18, height:18 }}/><span style={{ fontSize:12, color:'var(--text-light)' }}>Loading…</span></div>
+                : <SearchChipSelect items={vegItems} selected={m?.dislikedVeg || []} onToggle={(v) => smfToggle('dislikedVeg', v)} placeholder="Search vegetables & greens…" />
+              }
             </div>
 
-            {/* Fruit Restrictions */}
+            {/* Fruit Restrictions — loaded from DB */}
             <div>
               <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', marginBottom:4 }}>Fruit Restrictions</div>
-              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Select fruits to avoid</div>
-              <SearchChipSelect
-                items={DISLIKED_FRU}
-                selected={m?.dislikedFruit || []}
-                onToggle={(f) => smfToggle('dislikedFruit', f)}
-                placeholder="Search fruits…"
-              />
+              <div style={{ fontSize:11, color:'var(--text-light)', marginBottom:10 }}>Search from our product list — selected ones will be excluded</div>
+              {ingrLoading
+                ? <div style={{ display:'flex', alignItems:'center', gap:8 }}><div className="spinner" style={{ width:18, height:18 }}/><span style={{ fontSize:12, color:'var(--text-light)' }}>Loading…</span></div>
+                : <SearchChipSelect items={fruitItems} selected={m?.dislikedFruit || []} onToggle={(f) => smfToggle('dislikedFruit', f)} placeholder="Search fruits…" />
+              }
             </div>
 
           </div>
@@ -936,24 +951,6 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
           {COOK_PREFS.map(c => {
             const sel = m?.cookPref?.includes(c) || false
             return <ToggleChip key={c} label={c} selected={sel} onToggle={() => smfToggle('cookPref', c)} />
-          })}
-        </div>
-      </div>
-
-      {/* Microgreens */}
-      <div>
-        <SectionTitle>Microgreens Preference</SectionTitle>
-        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>Experience level</div>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
-          {['New User','Occasionally Uses','Regular User'].map(ex => (
-            <button key={ex} onClick={() => smf('microgreenExperience', ex)} style={{ padding:'6px 14px', borderRadius:50, fontSize:12, fontWeight:600, border:`1.5px solid ${m?.microgreenExperience===ex?'var(--green)':'var(--border)'}`, background:m?.microgreenExperience===ex?'var(--green)':'#fff', color:m?.microgreenExperience===ex?'#fff':'var(--text)', cursor:'pointer' }}>{ex}</button>
-          ))}
-        </div>
-        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:8 }}>Interested in</div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-          {MICROGREEN_TYPES.map(mg => {
-            const sel = m?.microgreenInterest?.includes(mg) || false
-            return <ToggleChip key={mg} label={mg} selected={sel} onToggle={() => smfToggle('microgreenInterest', mg)} />
           })}
         </div>
       </div>
