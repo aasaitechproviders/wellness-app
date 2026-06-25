@@ -24,7 +24,7 @@ export default function Recommend() {
   const [catalog,  setCatalog]   = useState({})
   const [loading,  setLoading]   = useState(!state?.result)
   const [allBaskets, setAllBaskets] = useState([])
-  const [browsing, setBrowsing]  = useState(false) // show all baskets section
+  const [browsing, setBrowsing]  = useState(state?.browseAll || false) // show all baskets section
 
   useEffect(() => {
     api.getIngredients({ limit: 141, page: 1 }).then(d => {

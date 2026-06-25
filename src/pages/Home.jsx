@@ -225,7 +225,7 @@ export default function Home() {
         <div style={{ padding: '14px 18px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600 }}>Curated Baskets</div>
-            <button onClick={() => nav('/goals')} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>See all →</button>
+            <button onClick={() => nav('/recommend', { state: { browseAll: true } })} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>See all →</button>
           </div>
           {loading
             ? <div className="center" style={{ height: 120 }}><div className="spinner" style={{ width: 32, height: 32 }}/></div>
