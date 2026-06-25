@@ -93,6 +93,7 @@ function emptyMember() {
     dislikedVeg: [], dislikedFruit: [],
     tastePref: [], cookPref: [],
     allergies: [],
+    // budget removed
   }
 }
 
@@ -208,6 +209,9 @@ export default function Setup() {
     return { ...x, [f]: has ? x[f].filter(g => g !== val) : [...x[f], val] }
   }))
 
+  // Sets a field on ALL members at once (e.g. preferred plan applies to everyone)
+  const smfAll = (f, val) => setMembers(m => m.map(x => ({ ...x, [f]: val })))
+
   const addMember = () => {
     setMembers(m => [...m, emptyMember()])
     setActiveMember(members.length)
@@ -250,15 +254,13 @@ export default function Setup() {
       }
     }
     if (step === 3) {
-      const missing = members.filter(m => !m.preferredPlan)
-      if (missing.length === members.length) return 'Please select a preferred subscription plan'
-      if (missing.length > 0) return `Please select a preferred plan for: ${missing.map(m => m.name || 'a member').join(', ')}`
+      if (!members.some(m => m.preferredPlan)) return 'Please select a subscription plan to continue'
     }
     return null
   }
 
   // Get Started is disabled on step 3 until every member has a preferredPlan
-  const allPlansSelected = members.every(m => !!m.preferredPlan)
+  const allPlansSelected = members.some(m => !!m.preferredPlan)  // one plan applies to all
   const ctaDisabled = saving || (step === STEPS.length - 1 && !allPlansSelected)
 
   const next = async () => {
@@ -437,16 +439,14 @@ export default function Setup() {
         {step === 0 && <Step0 p={profile} sf={sf} />}
         {step === 1 && <Step1 members={members} active={activeMember} setActive={setActiveMember} addMember={addMember} remMember={remMember} smf={smf} />}
         {step === 2 && <Step2 members={members} active={activeMember} setActive={setActiveMember} smfToggle={smfToggle} />}
-        {step === 3 && <Step3 members={members} active={activeMember} setActive={setActiveMember} smf={smf} smfToggle={smfToggle} bmi={bmi} cur={cur} />}
+        {step === 3 && <Step3 members={members} active={activeMember} setActive={setActiveMember} smf={smf} smfToggle={smfToggle} smfAll={smfAll} bmi={bmi} cur={cur} />}
       </div>
 
       {/* CTA */}
       <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'14px 20px 28px', background:'var(--white)', borderTop:'1px solid var(--border)' }}>
         {step === STEPS.length - 1 && !allPlansSelected && !isEditMode && (
           <div style={{ fontSize:12, color:'var(--text-light)', textAlign:'center', marginBottom:8 }}>
-            {members.length > 1
-              ? `Select a preferred plan for all ${members.length} members to continue`
-              : 'Select a preferred subscription plan to continue'}
+            Select a subscription plan to continue
           </div>
         )}
         <button className="btn btn-primary" onClick={next} disabled={isEditMode ? saving : ctaDisabled}>
@@ -896,14 +896,13 @@ function Step2({ members, active, setActive, smfToggle }) {
 }
 
 // ─── STEP 3: Food Preferences ─────────────────────────────────────────────────
-function Step3({ members, active, setActive, smf, smfToggle }) {
+function Step3({ members, active, setActive, smf, smfToggle, smfAll }) {
   const m = members[active]
   const [plans, setPlans]               = useState([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [vegItems, setVegItems]         = useState([])
   const [fruitItems, setFruitItems]     = useState([])
   const [ingrLoading, setIngrLoading]   = useState(true)
-
   useEffect(() => {
     api.getPlans()
       .then(d => setPlans(d.plans || []))
@@ -1043,10 +1042,16 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
         </div>
       </div>
 
-      {/* Subscription preference */}
+      {/* Subscription preference — one plan applies to all family members */}
       <div>
         <SectionTitle>Preferred Plan</SectionTitle>
-        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:10 }}>We'll suggest the right subscription for you</div>
+        <div style={{ fontSize:12, color:'var(--text-light)', marginBottom:6 }}>Select a plan — it will apply to all family members</div>
+        {members.length > 1 && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10, padding:'6px 12px', background:'var(--green-pale)', borderRadius:8, width:'fit-content' }}>
+            <span style={{ fontSize:13 }}>👨‍👩‍👧</span>
+            <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>Applies to all {members.length} family members</span>
+          </div>
+        )}
         {plansLoading ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 0' }}>
             <div className="spinner" style={{ width:24, height:24 }} />
@@ -1056,14 +1061,15 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {plans.map(plan => {
-              const sel = m?.preferredPlan === plan.planId
+              // Use first member's preferredPlan as the selected plan for all
+              const sel = members[0]?.preferredPlan === plan.planId
               const durationLabel = plan.duration === 1 ? 'Daily'
                 : plan.duration === 7  ? '7 Days'
                 : plan.duration === 15 ? '15 Days'
                 : plan.duration === 30 ? '30 Days'
                 : `${plan.duration} Days`
               return (
-                <div key={plan.planId} onClick={() => smf('preferredPlan', plan.planId)} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+                <div key={plan.planId} onClick={() => smfAll('preferredPlan', plan.planId)} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
                   <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {sel && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
                   </div>
@@ -1082,25 +1088,60 @@ function Step3({ members, active, setActive, smf, smfToggle }) {
             })}
           </div>
         )}
+
+        {/* Per-member plan override */}
+        {members.length > 1 && (
+          <div style={{ marginTop:12 }}>
+            <button
+              onClick={() => setCustomisePlan(v => !v)}
+              style={{ background:'none', border:'none', color:'var(--green)', fontSize:12, fontWeight:600, cursor:'pointer', padding:0, display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:14 }}>{customisePlan ? '▾' : '▸'}</span>
+              Customise plan per member
+            </button>
+
+            {customisePlan && (
+              <div style={{ marginTop:10, background:'#fff', borderRadius:14, border:'1px solid var(--border)', padding:'14px', display:'flex', flexDirection:'column', gap:12 }}>
+                <div style={{ fontSize:12, color:'var(--text-light)' }}>Override the plan for a specific member</div>
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  {members.map((mem, i) => (
+                    <button key={i} onClick={() => setCustomActive(i)}
+                      style={{ padding:'5px 14px', borderRadius:50, fontSize:12, fontWeight:600, border:`1.5px solid ${customActive===i?'var(--green)':'var(--border)'}`, background:customActive===i?'var(--green)':'#fff', color:customActive===i?'#fff':'var(--text)', cursor:'pointer', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', gap:5 }}>
+                      {mem.name || `Member ${i+1}`}
+                      {mem.preferredPlan && <span style={{ opacity:0.8 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {plans.map(plan => {
+                    const mem = members[customActive]
+                    const sel = mem?.preferredPlan === plan.planId
+                    const dur = plan.duration === 1 ? 'Daily' : plan.duration === 7 ? '7 Days' : plan.duration === 30 ? '30 Days' : `${plan.duration} Days`
+                    return (
+                      <div key={plan.planId}
+                        onClick={() => setMembers(prev => prev.map((x, i) => i === customActive ? { ...x, preferredPlan: plan.planId } : x))}
+                        style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer', transition:'all 0.15s' }}>
+                        <div style={{ width:15, height:15, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          {sel && <div style={{ width:6, height:6, borderRadius:'50%', background:'#fff' }}/>}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontWeight:600, fontSize:12, color:sel?'var(--green)':'var(--text)' }}>{plan.planName}</div>
+                          <div style={{ fontSize:11, color:'var(--text-light)' }}>{plan.description || dur}</div>
+                        </div>
+                        {plan.price && <div style={{ fontWeight:700, fontSize:13, color:sel?'var(--green)':'var(--text)', flexShrink:0 }}>₹{plan.price}</div>}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ fontSize:11, color:'var(--text-light)', borderTop:'1px solid var(--border)', paddingTop:8 }}>
+                  💡 This overrides the shared plan for {members[customActive]?.name || 'this member'} only
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Budget */}
-      <div>
-        <SectionTitle>Monthly Wellness Budget</SectionTitle>
-        <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
-          {['Under ₹1,000','₹1,000 – ₹2,000','₹2,000 – ₹4,000','Above ₹4,000'].map(b => {
-            const sel = m?.budget === b
-            return (
-              <div key={b} onClick={() => smf('budget', b)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green-pale)':'#fff', cursor:'pointer' }}>
-                <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${sel?'var(--green)':'var(--border)'}`, background:sel?'var(--green)':'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  {sel && <div style={{ width:7, height:7, borderRadius:'50%', background:'#fff' }}/>}
-                </div>
-                <span style={{ fontSize:13, fontWeight:sel?600:400 }}>{b}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+
     </div>
   )
 }
