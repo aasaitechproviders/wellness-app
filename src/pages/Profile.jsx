@@ -92,7 +92,7 @@ export default function Profile() {
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>Your Profile</div>
-              <button onClick={() => nav('/setup')} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+              <button onClick={() => nav('/setup', { state: { editMode: true } })} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
             </div>
             {f?.apartmentName && <InfoRow icon="🏠" label="Apartment" value={`${f.apartmentName}, Flat ${f.flatNo}${f.towerNo ? `, ${f.towerNo}` : ''}`} />}
             {f?.address       && <InfoRow icon="📍" label="Address"   value={`${f.address}, ${f.city}`} />}

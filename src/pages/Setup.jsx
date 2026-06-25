@@ -99,8 +99,9 @@ function emptyMember() {
 export default function Setup() {
   const { family, updateFamily } = useAuth()
   const nav = useNavigate()
-  const location = useLocation()
-  const isEditMode = !!family?.profileComplete   // true when coming from Profile → Edit
+  const { state: locationState } = useLocation()
+  // Edit mode: came from Profile (state.editMode) OR family already registered (profileComplete) OR has members
+  const isEditMode = !!(locationState?.editMode || family?.profileComplete || family?.members?.length > 0)
 
   const [step, setStep]     = useState(isEditMode ? 1 : 0)
   const [saving, setSaving] = useState(false)
