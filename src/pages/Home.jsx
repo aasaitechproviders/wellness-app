@@ -7,498 +7,379 @@ import BottomNav from '../components/BottomNav'
 import { showToast } from '../components/Toast'
 import logo from '../assets/logo.png'
 
+const AVATAR_COLORS = ['#2D6A35','#1565C0','#AD1457','#E65100','#6A1B9A','#00695C']
+const initials = (n='') => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()
+const avatarColor = (i) => AVATAR_COLORS[i % AVATAR_COLORS.length]
+
+const GOAL_ICONS = {
+  'Immunity Support':'🛡️','Iron Support':'💧','Protein Support':'💪',
+  'Weight Management':'⚖️','Diabetes Control':'🩺','Diabetes Friendly':'🩺',
+  'Heart Wellness':'❤️','Digestive Wellness':'🌀','Detox':'✨',
+  'Kids Nutrition':'😊','Senior Wellness':'👴','Bone Health':'🦴','General Wellness':'🌿',
+}
+
 export default function Home() {
   const { family, updateFamily } = useAuth()
   const { addToCart, removeFromCart, isInCart } = useCart()
   const nav = useNavigate()
-  const [baskets, setBaskets]         = useState([])
-  const [goals,   setGoals]           = useState([])
+  const [baskets,     setBaskets]     = useState([])
   const [recentOrder, setRecentOrder] = useState(null)
-  const [activeSub, setActiveSub]     = useState(null)
-  const [loading, setLoading]         = useState(true)
+  const [activeSub,   setActiveSub]   = useState(null)
+  const [loading,     setLoading]     = useState(true)
+  const [freshFamily, setFreshFamily] = useState(null)
+  const [currentSlide, setCurrentSlide] = useState(0)
 
-  // ── Address change sheet state ────────────────────────────────────────────
-  const [addrSheet, setAddrSheet]     = useState(false)
-  const [addrSaving, setAddrSaving]   = useState(false)
-  const [cities, setCities]           = useState([])
-  const [apts, setApts]               = useState([])
-  const [aptLoading, setAptLoading]   = useState(false)
-  const [aptSearch, setAptSearch]     = useState('')
-  const [aptOpen, setAptOpen]         = useState(false)
-  const [addr, setAddr] = useState({
-    deliveryType: 'individual',
-    city: 'Coimbatore',
-    apartmentId: '', apartmentName: '',
-    towerNo: '', flatNo: '',
-    landmark: '', pincode: '',
-  })
+  // Address sheet
+  const [addrSheet, setAddrSheet] = useState(false)
+  const [addr, setAddr] = useState({ city:'Coimbatore', deliveryType:'individual', aptName:'', tower:'', flat:'', landmark:'', pincode:'' })
+  const [addrSaving, setAddrSaving] = useState(false)
 
   useEffect(() => {
     if (!family?._id) return
-
-    // Fetch fresh family data (auth context may have stale member/goal data after setup)
-    const freshFamily = api.getFamily(family._id)
-      .then(d => d.family || family)
-      .catch(() => family)
-
-    freshFamily.then(f => {
-      const members  = (f.members || []).filter(m => m.wellnessGoals?.length)
-      const allGoals = [...new Set((f.members || []).flatMap(m => m.wellnessGoals || []))]
-
-      // Use recommendation engine if goals exist, otherwise show all baskets
-      const basketPromise = members.length > 0
-        ? api.recommend({ members })
-            .then(d => {
-              // Build flat list from memberResults with member name attached
-              const memberResults = d.recommendation?.memberResults || []
-              const seen = new Set()
-              const flat = []
-              for (const mr of memberResults) {
-                for (const b of (mr.baskets || [])) {
-                  const key = b._id?.toString()
-                  if (!seen.has(key)) {
-                    seen.add(key)
-                    flat.push({ ...b, _forMember: mr.memberName })
-                  }
-                }
-              }
-              return flat.slice(0, 4)
-            })
-            .catch(() => api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => []))
-        : api.getBaskets({}).then(d => (d.baskets || []).slice(0, 4)).catch(() => [])
+    api.getFamily(family._id).then(d => {
+      const f = d.family || family
+      setFreshFamily(f)
+      const members = (f.members||[]).filter(m=>m.wellnessGoals?.length)
+      const basketP = members.length>0
+        ? api.recommend({members}).then(d=>{
+            const mr = d.recommendation?.memberResults||[]
+            const seen=new Set(), flat=[]
+            for(const r of mr) for(const b of (r.baskets||[])){const k=b._id?.toString();if(!seen.has(k)){seen.add(k);flat.push({...b,_forMember:r.memberName})}}
+            return flat.slice(0,6)
+          }).catch(()=>api.getBaskets({}).then(d=>(d.baskets||[]).slice(0,6)).catch(()=>[]))
+        : api.getBaskets({}).then(d=>(d.baskets||[]).slice(0,6)).catch(()=>[])
 
       Promise.all([
-        basketPromise,
-        api.getOrders(family._id).catch(() => ({ orders: [] })),
-        api.getSubscriptions(family._id).catch(() => ({ subscriptions: [] })),
-      ]).then(([basketArr, o, s]) => {
-        setBaskets(basketArr)
-        setGoals(allGoals)
-        setRecentOrder(o.orders?.[0] || null)
-        setActiveSub(s.subscriptions?.find(x => x.status === 'active') || null)
-      }).finally(() => setLoading(false))
-    })
-  }, [family?._id])
+        basketP,
+        api.getOrders(family._id).catch(()=>({orders:[]})),
+        api.getSubscriptions(family._id).catch(()=>({subscriptions:[]})),
+      ]).then(([bArr,o,s])=>{
+        setBaskets(bArr)
+        setRecentOrder(o.orders?.[0]||null)
+        setActiveSub(s.subscriptions?.find(x=>x.status==='active')||null)
+        // Pre-fill address
+        const adr=f.deliveryAddress||f
+        setAddr({ city:f.city||'Coimbatore', deliveryType:f.deliveryType||'individual', aptName:f.apartmentName||'', tower:f.towerNo||'', flat:f.flatNo||'', landmark:f.landmark||'', pincode:f.pincode||'' })
+      }).finally(()=>setLoading(false))
+    }).catch(()=>setLoading(false))
+  },[family])
 
-  // ── Open address sheet: pre-fill from family ──────────────────────────────
-  const openAddrSheet = () => {
-    const deliveryType = family?.apartmentId ? 'gated' : 'individual'
-    const addrStr = family?.address || ''
-    const parts   = addrStr.split(',').map(s => s.trim())
-    const pincode = parts.find(p => /^\d{6}$/.test(p)) || ''
-    const landmark = parts.filter(p => p !== pincode).join(', ')
-    setAddr({
-      deliveryType,
-      city:          family?.city || '',
-      apartmentId:   family?.apartmentId || '',
-      apartmentName: family?.apartmentName || '',
-      towerNo:       family?.towerNo || '',
-      flatNo:        family?.flatNo || '',
-      landmark:      deliveryType === 'individual' ? landmark : '',
-      pincode:       deliveryType === 'individual' ? pincode  : '',
-    })
-    setAptSearch('')
-    setAptOpen(false)
-    // Fetch cities from backend
-    api.getCities().then(d => setCities(d.cities || [])).catch(() => {})
-    setAddrSheet(true)
+  const f = freshFamily || family
+  const members = f?.members || []
+  const allGoals = [...new Set(members.flatMap(m=>m.wellnessGoals||[]))]
+
+  const addrLabel = () => {
+    const parts=[]
+    if(addr.flat) parts.push(addr.flat)
+    if(addr.aptName) parts.push(addr.aptName)
+    if(!parts.length&&addr.city) parts.push(addr.city)
+    return parts.join(', ')
   }
 
-  // ── Load apartments when gated is selected ────────────────────────────────
-  useEffect(() => {
-    if (!addrSheet || addr.deliveryType !== 'gated') return
-    setAptLoading(true)
-    api.getApartments(addr.city)
-      .then(d => setApts(d.apartments || []))
-      .catch(() => {})
-      .finally(() => setAptLoading(false))
-  }, [addrSheet, addr.deliveryType, addr.city])
-
-  const setA = (k, v) => setAddr(p => ({ ...p, [k]: v }))
-
-  const saveAddress = async () => {
-    if (!addr.flatNo) return showToast('Flat number is required', 'error')
-    if (addr.deliveryType === 'individual' && !addr.apartmentName) return showToast('Building name is required', 'error')
-    if (addr.deliveryType === 'gated' && !addr.apartmentName) return showToast('Please select an apartment', 'error')
+  const saveAddr = async () => {
     setAddrSaving(true)
     try {
-      const body = {
-        apartmentId:   addr.deliveryType === 'gated' ? addr.apartmentId : null,
-        apartmentName: addr.apartmentName,
-        flatNo:        addr.flatNo,
-        towerNo:       addr.towerNo || '',
-        address:       addr.deliveryType === 'individual'
-          ? [addr.landmark, addr.pincode].filter(Boolean).join(', ')
-          : '',
-        city: addr.city,
-      }
-      const d = await api.updateFamily(family._id, body)
-      updateFamily(d.family)
-      showToast('Address updated ✓', 'success')
+      const upd = await api.updateFamily(family._id,{ city:addr.city, deliveryType:addr.deliveryType, apartmentName:addr.aptName, towerNo:addr.tower, flatNo:addr.flat, landmark:addr.landmark, pincode:addr.pincode })
+      updateFamily(upd.family||f)
+      setFreshFamily(upd.family||f)
+      showToast('Address updated ✓','success')
       setAddrSheet(false)
-    } catch(e) {
-      showToast(e.message || 'Failed to save', 'error')
-    } finally {
-      setAddrSaving(false)
-    }
+    } catch(e){ showToast(e.message,'error') } finally { setAddrSaving(false) }
   }
 
-  const filteredApts = apts.filter(a =>
-    a.apartmentName?.toLowerCase().includes(aptSearch.toLowerCase())
+  if(loading) return (
+    <div className="page-full center" style={{ minHeight:'100dvh' }}>
+      <div style={{ textAlign:'center' }}>
+        <div className="spinner" style={{ margin:'0 auto 16px' }} />
+        <p style={{ color:'var(--text-light)',fontSize:13 }}>Loading your wellness…</p>
+      </div>
+    </div>
   )
 
-  const members = family?.members || []
-  // goals computed from fresh family data via setGoals
+  const memberColors = ['PK','AK','AA','AM']
 
   return (
     <div className="page-shell fade-in">
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ background: 'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)', padding: '18px 18px 20px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={logo} alt="KP" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'contain', background: 'rgba(255,255,255,0.1)' }} />
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 500, letterSpacing: 0.2 }}>Welcome to Krisha Pure</div>
-              <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
-                Eat Pure. Live Well. 🌿
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => nav('/profile')}
-            style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* Address chip — clickable to change address */}
-        {family?.apartmentName ? (
-          <button
-            onClick={openAddrSheet}
-            style={{ width: '100%', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', textAlign: 'left' }}>
-            <span style={{ fontSize: 14 }}>🏠</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{family.apartmentName}</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 1 }}>
-                Flat {family.flatNo}{family.towerNo ? ` · ${family.towerNo}` : ''} · {family.city}
-              </div>
-            </div>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>Change ›</span>
-          </button>
-        ) : (
-          <button
-            onClick={openAddrSheet}
-            style={{ width: '100%', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8, border: '1.5px dashed rgba(255,255,255,0.3)', cursor: 'pointer' }}>
-            <span style={{ fontSize: 14 }}>📍</span>
-            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 600 }}>Add your delivery address</div>
-          </button>
-        )}
-      </div>
-
-      {/* ── Scrollable content ─────────────────────────────────────────── */}
       <div className="page-shell-scroll with-nav">
 
-        {/* Active subscription banner */}
-        {activeSub && (
-          <div style={{ margin: '12px 18px 0', background: 'var(--green-pale)', borderRadius: 12, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--green-muted)' }}>
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Active Subscription</div>
-              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{activeSub.planName}</div>
-            </div>
-            <button onClick={() => nav('/orders')} style={{ background: 'var(--green)', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Track →</button>
-          </div>
-        )}
-
-        {/* Hero CTA */}
-        <div style={{ padding: '14px 18px 0' }}>
-          <div
-            onClick={() => nav('/goals')}
-            style={{ background: 'linear-gradient(135deg,#2D6A35 0%,#4A9456 100%)', borderRadius: 16, padding: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Personalised For You</div>
-              <div style={{ color: '#fff', fontFamily: 'Playfair Display,serif', fontSize: 18, fontWeight: 700, lineHeight: 1.3 }}>
-                Get Your Wellness<br/>Basket Today
+        {/* ── Top header ── */}
+        <div style={{ padding:'16px 18px 12px', background:'var(--white)' }}>
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+            <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+              <img src={logo} alt="KP" style={{ width:36,height:36,borderRadius:10,objectFit:'contain' }} />
+              <div>
+                <div style={{ fontSize:12,color:'var(--text-light)',fontWeight:500 }}>Welcome to Krisha Pure</div>
+                <div style={{ fontFamily:'var(--font-head)',fontSize:18,fontWeight:700,color:'var(--text)',display:'flex',alignItems:'center',gap:6 }}>
+                  Eat Pure. Live Well. <span>🌿</span>
+                </div>
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 8 }}>Based on your family's goals →</div>
             </div>
-            <div style={{ fontSize: 52, filter:'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }}>🧺</div>
+            <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+              <div style={{ position:'relative',cursor:'pointer' }}>
+                <span style={{ fontSize:22 }}>🔔</span>
+                <span style={{ position:'absolute',top:-3,right:-3,background:'var(--red)',color:'#fff',fontSize:8,fontWeight:700,width:14,height:14,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center' }}>2</span>
+              </div>
+              <div style={{ width:36,height:36,borderRadius:50,background:'var(--green)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,cursor:'pointer' }}
+                onClick={()=>nav('/profile')}>
+                {initials(f?.familyName)}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Family Goals strip */}
-        {goals.length > 0 && (
-          <div style={{ padding: '14px 18px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600 }}>Family Goals</div>
-              <button onClick={() => nav('/goals')} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit →</button>
+        {/* ── Address bar ── */}
+        <div style={{ margin:'0 18px 14px',background:'var(--green-pale)',borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:10,cursor:'pointer',border:'1px solid #C8E6C9' }} onClick={()=>setAddrSheet(true)}>
+          <div style={{ width:34,height:34,borderRadius:10,background:'var(--green)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+            <span style={{ fontSize:16 }}>🏠</span>
+          </div>
+          <div style={{ flex:1,minWidth:0 }}>
+            <div style={{ fontWeight:700,fontSize:13,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+              {addrLabel()||f?.familyName||'Your home'}
             </div>
-            <div className="hscroll">
-              {goals.slice(0, 6).map(g => (
-                <span key={g} className="tag" style={{ whiteSpace: 'nowrap', padding: '5px 12px', fontSize: 12 }}>{g}</span>
+            <div style={{ fontSize:11,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5 }}>
+              {addr.flat?`Flat ${addr.flat} · `:''}{addr.city||'COIMBATORE'}
+            </div>
+          </div>
+          <span style={{ fontSize:13,fontWeight:700,color:'var(--green)',flexShrink:0 }}>Change ›</span>
+        </div>
+
+        {/* ── Hero banner ── */}
+        <div style={{ margin:'0 18px 18px',background:'linear-gradient(135deg,#EBF5EC 0%,#C8E6C9 50%,#A8D5AA 100%)',borderRadius:18,overflow:'hidden',padding:'20px',position:'relative',minHeight:140 }}>
+          <div style={{ position:'absolute',top:0,right:0,width:160,height:160,display:'flex',alignItems:'center',justifyContent:'center',opacity:0.85 }}>
+            <span style={{ fontSize:100 }}>🧺</span>
+          </div>
+          <div style={{ position:'relative',zIndex:1,maxWidth:'60%' }}>
+            <div style={{ fontSize:10,fontWeight:700,letterSpacing:1,color:'var(--green)',textTransform:'uppercase',marginBottom:4 }}>PERSONALISED FOR YOU</div>
+            <div style={{ fontFamily:'var(--font-head)',fontSize:22,fontWeight:700,color:'var(--green-dark)',lineHeight:1.25,marginBottom:6 }}>
+              Get Your Wellness Basket Today
+            </div>
+            <div style={{ fontSize:13,color:'var(--green-mid)',marginBottom:14,display:'flex',alignItems:'center',gap:4 }}>
+              Based on your family's goals →
+            </div>
+            <button className="btn btn-primary" onClick={()=>nav('/goals')} style={{ width:'auto',padding:'10px 18px',fontSize:13,borderRadius:12 }}>
+              🧺 Get Basket
+            </button>
+          </div>
+        </div>
+
+        {/* ── Family Wellness Progress ── */}
+        {members.length>0 && (
+          <div style={{ padding:'0 18px 18px' }}>
+            <div className="section-hd">
+              <span className="section-title">Family Wellness Progress</span>
+              <span className="section-link" onClick={()=>nav('/goals')}>View all →</span>
+            </div>
+            <div className="chip-row">
+              {members.slice(0,4).map((m,i)=>{
+                const goals=(m.wellnessGoals||[]).length
+                const pct = goals===3?85:goals===2?70:goals===1?50:30
+                return (
+                  <div key={i} style={{ background:'var(--white)',border:`2px solid ${i===0?'var(--green)':'var(--border)'}`,borderRadius:14,padding:'12px',minWidth:130,flexShrink:0 }}>
+                    <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:8 }}>
+                      <div className="avatar-chip" style={{ width:32,height:32,background:avatarColor(i),fontSize:11 }}>{initials(m.name)}</div>
+                      <div>
+                        <div style={{ fontSize:12,fontWeight:700,color:'var(--text)' }}>{m.name.split(' ')[0]}{i===0?' (You)':''}</div>
+                        <div style={{ fontSize:10,color:'var(--text-light)' }}>
+                          {m.age||'–'} yrs · {m.gender||'–'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:11,color:'var(--text-mid)',marginBottom:5 }}>{goals} Goals</div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width:`${pct}%` }} />
+                    </div>
+                    <div style={{ fontSize:10,fontWeight:700,color:'var(--green)',marginTop:3 }}>{pct}%</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Family Goals chips ── */}
+        {allGoals.length>0 && (
+          <div style={{ padding:'0 18px 18px' }}>
+            <div className="section-hd">
+              <span className="section-title">Family Goals</span>
+              <span className="section-link" onClick={()=>nav('/goals')}>Edit ✏</span>
+            </div>
+            <div className="chip-row">
+              {allGoals.map(g=>(
+                <div key={g} style={{ display:'flex',alignItems:'center',gap:6,padding:'6px 14px',background:'var(--white)',border:'1px solid var(--border)',borderRadius:20,flexShrink:0 }}>
+                  <span style={{ fontSize:14 }}>{GOAL_ICONS[g]||'🌿'}</span>
+                  <span style={{ fontSize:12,fontWeight:600,color:'var(--text-mid)' }}>{g}</span>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Curated Baskets */}
-        <div style={{ padding: '14px 18px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600 }}>Curated Baskets</div>
-            <button onClick={() => nav('/recommend', { state: { browseAll: true } })} style={{ background: 'none', border: 'none', color: 'var(--green)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>See all →</button>
+        {/* ── Curated Baskets ── */}
+        <div style={{ padding:'0 18px 18px' }}>
+          <div className="section-hd">
+            <span className="section-title">Curated Baskets for You</span>
+            <span className="section-link" onClick={()=>nav('/recommend')}>See all →</span>
           </div>
-          {loading
-            ? <div className="center" style={{ height: 120 }}><div className="spinner" style={{ width: 32, height: 32 }}/></div>
-            : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {baskets.map(b => {
-                  const inCart = isInCart(b._id)
+          {baskets.length===0 ? (
+            <div style={{ background:'var(--white)',borderRadius:14,padding:'24px',textAlign:'center',border:'1px solid var(--border)' }}>
+              <div style={{ fontSize:40,marginBottom:8 }}>🧺</div>
+              <div style={{ fontSize:14,fontWeight:600,marginBottom:4 }}>No baskets yet</div>
+              <div style={{ fontSize:12,color:'var(--text-light)',marginBottom:14 }}>Set your wellness goals to get personalized baskets</div>
+              <button className="btn btn-primary" onClick={()=>nav('/goals')} style={{ width:'auto',padding:'10px 20px',fontSize:13 }}>Set Goals →</button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
+                {baskets.slice(0,4).map((b,i)=>{
+                  const inCart=isInCart(b._id)
                   return (
-                    <div
-                      key={b._id}
-                      style={{ background: '#fff', borderRadius: 14, padding: '14px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ fontSize: 30, marginBottom: 8 }}>🧺</div>
-                      {b._forMember && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--green)', color: '#fff', padding: '2px 8px', borderRadius: 50, fontSize: 10, fontWeight: 700, marginBottom: 6, alignSelf: 'flex-start' }}>
-                          👤 {b._forMember}
+                    <div key={b._id||i} className="basket-card" onClick={()=>nav(`/basket/${b._id}`,{state:{basket:b}})}>
+                      <div style={{ height:120,background:'linear-gradient(135deg,#EBF5EC,#C8E6C9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:56,position:'relative' }}>
+                        🧺
+                        {b._forMember && (
+                          <div style={{ position:'absolute',top:6,left:6,background:'rgba(255,255,255,0.9)',borderRadius:6,padding:'2px 7px',fontSize:10,fontWeight:700,color:'var(--green)',display:'flex',alignItems:'center',gap:3 }}>
+                            👥 For Your Family
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding:'10px 12px 12px' }}>
+                        <div style={{ fontSize:13,fontWeight:700,marginBottom:3,lineHeight:1.3 }}>{b.basketName}</div>
+                        <div style={{ fontSize:11,color:'var(--text-light)',marginBottom:6,lineHeight:1.4 }}>{b.description}</div>
+                        {b.wellnessGoal && (
+                          <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:8 }}>
+                            <span style={{ fontSize:12 }}>{GOAL_ICONS[b.wellnessGoal]||'🌿'}</span>
+                            <span style={{ fontSize:10,fontWeight:600,color:'var(--green)' }}>{b.wellnessGoal}</span>
+                          </div>
+                        )}
+                        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                          <div style={{ fontFamily:'var(--font-head)',fontSize:18,fontWeight:700,color:'var(--text)' }}>₹{b.price}</div>
+                          <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                            <button onClick={e=>{e.stopPropagation();inCart?removeFromCart(b._id):addToCart(b);showToast(inCart?'Removed from cart':'Added to cart ✓',inCart?'':'success')}}
+                              style={{ padding:'6px 10px',borderRadius:10,border:`1.5px solid ${inCart?'var(--red)':'var(--green)'}`,background:inCart?'#FFF0F0':'var(--green)',color:inCart?'var(--red)':'#fff',fontSize:11,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
+                              {inCart?<>✕ Remove</>:<>🛒 Add</>}
+                            </button>
+                            <button onClick={e=>e.stopPropagation()} style={{ width:30,height:30,borderRadius:8,border:'1.5px solid #FFCDD2',background:'#FFF0F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,cursor:'pointer' }}>
+                              ♡
+                            </button>
+                          </div>
                         </div>
-                      )}
-                      <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3, marginBottom: 4 }}>{b.basketName}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 8, lineHeight: 1.4 }}>{b.description}</div>
-                      {b.wellnessGoal && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--green-pale)', color: 'var(--green)', padding: '2px 8px', borderRadius: 50, fontSize: 10, fontWeight: 600, marginBottom: 8 }}>✓ {b.wellnessGoal}</div>
-                      )}
-                      <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16, marginBottom: 10 }}>₹{b.price}</div>
-
-                      {/* Add / Remove from Cart */}
-                      {inCart ? (
-                        <div style={{ display: 'flex', gap: 5, marginTop: 'auto' }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); nav('/cart') }}
-                            style={{ flex: 1, padding: '8px 0', background: 'var(--green-pale)', color: 'var(--green)', border: '1.5px solid var(--green)', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                            ✓ In Cart
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeFromCart(b._id); showToast(`${b.basketName} removed`, 'success') }}
-                            style={{ width: 32, height: 32, flexShrink: 0, background: '#FEE2E2', border: 'none', borderRadius: 8, color: '#DC2626', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); addToCart(b); showToast(`${b.basketName} added to cart 🛒`, 'success') }}
-                          style={{ width: '100%', padding: '8px 0', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 'auto' }}>
-                          🛒 Add to Cart
-                        </button>
-                      )}
+                      </div>
                     </div>
                   )
                 })}
               </div>
-            )
-          }
+              {/* Dots */}
+              {baskets.length>4 && (
+                <div style={{ display:'flex',justifyContent:'center',gap:6,marginTop:12 }}>
+                  {[0,1,2].map(i=><div key={i} style={{ width:i===0?20:8,height:8,borderRadius:4,background:i===0?'var(--green)':'var(--border)' }} />)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Recent Order */}
-        {recentOrder && (
-          <div style={{ padding: '14px 18px 0' }}>
-            <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Recent Order</div>
-            <div className="card" onClick={() => nav(`/orders/${recentOrder._id}`)} style={{ cursor: 'pointer', marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{recentOrder.orderNo}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 2 }}>
-                    {new Date(recentOrder.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </div>
-                </div>
-                <span className={`pill pill-${recentOrder.status}`}>{recentOrder.status.replace(/_/g,' ')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-light)' }}>{recentOrder.items?.length || 0} items</span>
-                <span style={{ fontWeight: 700, color: 'var(--green)', fontSize: 16 }}>₹{recentOrder.totalAmount}</span>
+        {/* ── Next Delivery banner ── */}
+        {(recentOrder||activeSub) && (
+          <div style={{ margin:'0 18px 18px',background:'var(--white)',borderRadius:14,border:'1px solid var(--border)',padding:'14px 16px',display:'flex',alignItems:'center',gap:12 }}>
+            <div style={{ width:40,height:40,borderRadius:12,background:'var(--green)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18 }}>📅</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13,fontWeight:700 }}>Next Delivery</div>
+              <div style={{ fontSize:12,color:'var(--text-light)' }}>
+                {recentOrder?.deliveryDate
+                  ? new Date(recentOrder.deliveryDate).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})
+                  : 'Tomorrow'}
+                {recentOrder?.deliverySlot?` · ${recentOrder.deliverySlot}`:''}
               </div>
             </div>
+            <button onClick={()=>nav('/orders')} style={{ padding:'7px 12px',borderRadius:10,border:'1.5px solid var(--border)',background:'var(--white)',fontSize:12,fontWeight:700,cursor:'pointer',color:'var(--text-mid)' }}>
+              View / Reschedule
+            </button>
           </div>
         )}
 
-        <div style={{ height: 24 }} />
-      </div>{/* end page-shell-scroll */}
-
-      <BottomNav />
-
-      {/* ── Address Change Bottom Sheet ─────────────────────────────────── */}
-      {addrSheet && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setAddrSheet(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200 }} />
-
-          {/* Sheet */}
-          <div style={{
-            position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-            width: '100%', maxWidth: 430,
-            background: '#fff', borderRadius: '20px 20px 0 0',
-            zIndex: 201, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
-            boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
-          }}>
-            {/* Handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)' }} />
-            </div>
-
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 10px' }}>
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 17, fontWeight: 700 }}>Change Delivery Address</div>
-              <button onClick={() => setAddrSheet(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-light)', lineHeight: 1 }}>✕</button>
-            </div>
-
-            {/* Scrollable body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-              {/* City */}
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-mid)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>City</div>
-                {cities.length === 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className="spinner" style={{ width: 16, height: 16 }} />
-                    <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Loading cities…</span>
-                  </div>
-                ) : (
-                  <select
-                    className="input-field"
-                    value={addr.city}
-                    onChange={e => setA('city', e.target.value)}
-                  >
-                    <option value="">Select city…</option>
-                    {cities.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                )}
+        {/* ── Quick Actions ── */}
+        <div style={{ padding:'0 18px 18px' }}>
+          <div className="section-title" style={{ marginBottom:14 }}>Quick Actions</div>
+          <div style={{ display:'flex',gap:0,justifyContent:'space-between' }}>
+            {[['🛍️','My Orders',()=>nav('/orders')],['🔄','Subscriptions',()=>nav('/orders')],['🧺','My Baskets',()=>nav('/recommend')],['📍','Address Book',()=>setAddrSheet(true)],['🎧','Help &\nSupport',()=>{}]].map(([ic,lb,fn])=>(
+              <div key={lb} className="quick-action" onClick={fn}>
+                <div className="quick-action-icon">{ic}</div>
+                <span style={{ fontSize:10,fontWeight:600,color:'var(--text-mid)',textAlign:'center',whiteSpace:'pre-line',lineHeight:1.4 }}>{lb}</span>
               </div>
+            ))}
+          </div>
+        </div>
 
-              {/* Delivery type */}
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-mid)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Location Type</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { id: 'individual', icon: '🏠', label: 'Individual Home', sub: 'Enter address manually' },
-                    { id: 'gated', icon: '🏘️', label: 'Gated Community', sub: 'Select from registered apartments' },
-                  ].map(({ id, icon, label, sub }) => (
-                    <div key={id} onClick={() => { setA('deliveryType', id); setA('apartmentName', ''); setA('apartmentId', '') }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 10, border: `1.5px solid ${addr.deliveryType === id ? 'var(--green)' : 'var(--border)'}`, background: addr.deliveryType === id ? 'var(--green-pale)' : '#fff', cursor: 'pointer' }}>
-                      <span style={{ fontSize: 20 }}>{icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: addr.deliveryType === id ? 'var(--green)' : 'var(--text)' }}>{label}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 1 }}>{sub}</div>
-                      </div>
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${addr.deliveryType === id ? 'var(--green)' : 'var(--border)'}`, background: addr.deliveryType === id ? 'var(--green)' : '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {addr.deliveryType === id && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Individual Home fields */}
-              {addr.deliveryType === 'individual' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <SheetField label="Building / Apartment Name *">
-                    <input className="input-field" placeholder="e.g. Green Meadows" value={addr.apartmentName} onChange={e => setA('apartmentName', e.target.value)} />
-                  </SheetField>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <SheetField label="Tower / Block">
-                      <input className="input-field" placeholder="Block A" value={addr.towerNo} onChange={e => setA('towerNo', e.target.value)} />
-                    </SheetField>
-                    <SheetField label="Flat Number *">
-                      <input className="input-field" placeholder="B-101" value={addr.flatNo} onChange={e => setA('flatNo', e.target.value)} />
-                    </SheetField>
-                  </div>
-                  <SheetField label="Landmark / Street">
-                    <input className="input-field" placeholder="Near metro / temple" value={addr.landmark} onChange={e => setA('landmark', e.target.value)} />
-                  </SheetField>
-                  <SheetField label="Pincode">
-                    <input className="input-field" type="tel" inputMode="numeric" maxLength={6} placeholder="641001" value={addr.pincode} onChange={e => setA('pincode', e.target.value.replace(/\D/g,''))} />
-                  </SheetField>
-                </div>
-              )}
-
-              {/* Gated Community fields */}
-              {addr.deliveryType === 'gated' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <SheetField label="Select Apartment / Wellness Partner">
-                    <div style={{ position: 'relative' }}>
-                      <div
-                        onClick={() => setAptOpen(o => !o)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 12px', border: `1.5px solid ${addr.apartmentName ? 'var(--green)' : 'var(--border)'}`, borderRadius: 10, background: addr.apartmentName ? 'var(--green-pale)' : '#fff', cursor: 'pointer', minHeight: 44 }}>
-                        <span style={{ fontSize: 13, color: addr.apartmentName ? 'var(--green)' : 'var(--text-light)', fontWeight: addr.apartmentName ? 600 : 400 }}>
-                          {addr.apartmentName || 'Search apartment…'}
-                        </span>
-                        <span style={{ fontSize: 13, color: 'var(--text-light)' }}>{aptOpen ? '▲' : '▼'}</span>
-                      </div>
-
-                      {aptOpen && (
-                        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1.5px solid var(--green-muted)', borderRadius: 12, zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
-                          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
-                            <input autoFocus className="input-field" style={{ marginBottom: 0 }} placeholder="🔍 Type to search…" value={aptSearch} onChange={e => setAptSearch(e.target.value)} />
-                          </div>
-                          <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-                            {aptLoading ? (
-                              <div style={{ padding: 16, textAlign: 'center' }}><div className="spinner" style={{ width: 22, height: 22, margin: '0 auto' }} /></div>
-                            ) : filteredApts.length === 0 ? (
-                              <div style={{ padding: 14, textAlign: 'center', fontSize: 12, color: 'var(--text-light)' }}>
-                                {apts.length === 0 ? 'No apartments found for this city' : 'No results'}
-                              </div>
-                            ) : filteredApts.map((apt, i) => (
-                              <div key={apt._id || i}
-                                onClick={() => { setA('apartmentName', apt.apartmentName); setA('apartmentId', apt.apartmentId || apt._id?.toString() || ''); setA('city', apt.city || addr.city); setAptOpen(false); setAptSearch('') }}
-                                style={{ padding: '11px 12px', borderBottom: i < filteredApts.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: addr.apartmentName === apt.apartmentName ? 'var(--green-pale)' : '#fff' }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: addr.apartmentName === apt.apartmentName ? 'var(--green)' : 'var(--text)' }}>{apt.apartmentName}</div>
-                                {apt.city && <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 1 }}>{apt.city}</div>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </SheetField>
-
-                  {addr.apartmentName && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <SheetField label="Tower / Block">
-                        <input className="input-field" placeholder="Block A" value={addr.towerNo} onChange={e => setA('towerNo', e.target.value)} />
-                      </SheetField>
-                      <SheetField label="Flat Number *">
-                        <input className="input-field" placeholder="B-101" value={addr.flatNo} onChange={e => setA('flatNo', e.target.value)} />
-                      </SheetField>
-                    </div>
-                  )}
-                </div>
-              )}
+        {/* ── Wellness Progress link ── */}
+        <div style={{ margin:'0 18px 18px',borderRadius:14,border:'1px solid var(--border)',overflow:'hidden',cursor:'pointer' }} onClick={()=>nav('/wellness-progress')}>
+          <div style={{ background:'linear-gradient(135deg,var(--green-dark),var(--green))',padding:'16px',display:'flex',alignItems:'center',gap:14 }}>
+            <div>
+              <div style={{ fontSize:10,fontWeight:700,letterSpacing:1,color:'rgba(255,255,255,0.7)',textTransform:'uppercase',marginBottom:2 }}>KRISHA WELLNESS SCORE™</div>
+              <div style={{ fontSize:32,fontWeight:700,color:'#fff',fontFamily:'var(--font-head)',lineHeight:1 }}>82<span style={{ fontSize:16,fontWeight:500 }}>/100</span></div>
+              <div style={{ fontSize:12,color:'rgba(255,255,255,0.8)',marginTop:4 }}>Excellent Progress</div>
             </div>
-
-            {/* Save button */}
-            <div style={{ padding: '12px 20px 28px', borderTop: '1px solid var(--border)' }}>
-              <button className="btn btn-primary" onClick={saveAddress} disabled={addrSaving}>
-                {addrSaving && <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />}
-                {addrSaving ? 'Saving…' : 'Save Address ✓'}
-              </button>
+            <div style={{ marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4 }}>
+              <div style={{ fontSize:13,color:'rgba(255,255,255,0.9)',fontWeight:600 }}>View Details →</div>
+              <div style={{ display:'flex',gap:2 }}>{'★★★★☆'.split('').map((s,i)=><span key={i} style={{ fontSize:14,color:s==='★'?'#FFD700':'rgba(255,255,255,0.4)' }}>{s}</span>)}</div>
             </div>
           </div>
-        </>
-      )}
-    </div>
-  )
-}
+        </div>
 
-function SheetField({ label, children }) {
-  return (
-    <div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mid)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
-      {children}
+      </div>
+      <BottomNav />
+
+      {/* ── Address bottom sheet ── */}
+      {addrSheet && (
+        <div className="sheet-overlay" onClick={()=>setAddrSheet(false)}>
+          <div className="sheet-body" onClick={e=>e.stopPropagation()}>
+            <div className="sheet-handle" />
+            <div style={{ padding:'0 20px 20px' }}>
+              <div style={{ fontSize:17,fontWeight:700,marginBottom:16 }}>Change Delivery Address</div>
+              <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
+                <div className="input-group">
+                  <label className="input-label">City</label>
+                  <select className="kp-select" value={addr.city} onChange={e=>setAddr(p=>({...p,city:e.target.value}))}>
+                    <option>Coimbatore</option><option>Chennai</option>
+                  </select>
+                </div>
+                <div style={{ display:'flex',gap:8 }}>
+                  {[{id:'individual',icon:'🏠',label:'Individual Home'},{id:'gated',icon:'🏢',label:'Gated Community'}].map(o=>(
+                    <button key={o.id} onClick={()=>setAddr(p=>({...p,deliveryType:o.id}))}
+                      style={{ flex:1,padding:'10px 8px',borderRadius:10,border:`1.5px solid ${addr.deliveryType===o.id?'var(--green)':'var(--border)'}`,background:addr.deliveryType===o.id?'var(--green-pale)':'var(--white)',fontSize:12,fontWeight:700,color:addr.deliveryType===o.id?'var(--green)':'var(--text-mid)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+                      {o.icon} {o.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Apartment / Building Name</label>
+                  <input className="kp-input no-icon" placeholder="e.g. Green Meadows Apartments" value={addr.aptName} onChange={e=>setAddr(p=>({...p,aptName:e.target.value}))} />
+                </div>
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+                  <div className="input-group">
+                    <label className="input-label">Tower / Block</label>
+                    <input className="kp-input no-icon" placeholder="Block A" value={addr.tower} onChange={e=>setAddr(p=>({...p,tower:e.target.value}))} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Flat / House No.</label>
+                    <input className="kp-input no-icon" placeholder="B-101" value={addr.flat} onChange={e=>setAddr(p=>({...p,flat:e.target.value}))} />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Landmark <span className="opt">(Optional)</span></label>
+                  <input className="kp-input no-icon" placeholder="Near Lotus Cafe" value={addr.landmark} onChange={e=>setAddr(p=>({...p,landmark:e.target.value}))} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Pincode</label>
+                  <input className="kp-input no-icon" placeholder="641001" maxLength={6} value={addr.pincode} onChange={e=>setAddr(p=>({...p,pincode:e.target.value.replace(/\D/g,'')}))} />
+                </div>
+                <button className="btn btn-primary" onClick={saveAddr} disabled={addrSaving}>
+                  {addrSaving?<span className="spinner" style={{width:20,height:20,borderWidth:2}}/>:'Save Address'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
