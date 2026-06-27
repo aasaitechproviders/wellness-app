@@ -58,7 +58,7 @@ const Tag = ({ label, icon }) => (
 )
 
 const SCard = ({ children, style }) => (
-  <div style={{ background:'var(--white)',borderRadius:14,border:'1px solid var(--border)',padding:'14px 16px',marginBottom:12,...style }}>
+  <div style={{ background:'var(--white)',borderRadius:14,border:'1px solid var(--border)',padding:'14px 16px 88px',marginBottom:12,...style }}>
     {children}
   </div>
 )

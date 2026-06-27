@@ -41,7 +41,7 @@ export default function Plans() {
       </div>
 
       {/* Scrollable content */}
-      <div className="page-shell-scroll" style={{ padding:'18px 18px 24px' }}>
+      <div className="page-shell-scroll" style={{ padding:'18px 18px 130px' }}>
         <p style={{ fontSize:13, color:'var(--text-light)', marginBottom:18 }}>
           Pick a plan that suits your family. You'll see your basket next.
         </p>

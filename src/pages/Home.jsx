@@ -78,39 +78,41 @@ export default function Home() {
 
   return (
     <div className="page fade-in">
+
+      {/* ── Top Header — fixed, outside scroll ── */}
+      <div style={{ background:'var(--white)', padding:'14px 18px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <img src={logo} alt="KP" style={{ width:36,height:36,borderRadius:10,objectFit:'contain' }} />
+          <div>
+            <div style={{ fontSize:12,color:'var(--text-light)',fontWeight:500 }}>Welcome to Krisha Pure</div>
+            <div style={{ fontFamily:'var(--font-serif)',fontSize:19,fontWeight:700,color:'var(--text)',display:'flex',alignItems:'center',gap:6,lineHeight:1.2 }}>
+              Eat Pure. Live Well. <span style={{ fontSize:16 }}>🌿</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ position:'relative',cursor:'pointer' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span style={{ position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:9,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center' }}>2</span>
+          </div>
+          <div onClick={()=>nav('/profile')} style={{ width:36,height:36,borderRadius:'50%',background:'var(--green)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,cursor:'pointer' }}>
+            {initials(f?.familyName)}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Address bar — fixed, outside scroll ── */}
+      <div className="addr-bar" style={{ margin:'0',borderRadius:0,borderBottom:'1px solid var(--border)',flexShrink:0 }} onClick={()=>setAddrSheet(true)}>
+        <div className="addr-icon">🏠</div>
+        <div style={{ flex:1,minWidth:0 }}>
+          <div style={{ fontWeight:700,fontSize:13,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{addrLine1}</div>
+          <div style={{ fontSize:11,color:'var(--text-light)',letterSpacing:0.5 }}>{addr.flat&&`Flat ${addr.flat} · `}{addrLine2}</div>
+        </div>
+        <span style={{ fontSize:13,fontWeight:700,color:'var(--green)',flexShrink:0 }}>Change  ›</span>
+      </div>
+
+      {/* ── Scrollable body ── */}
       <div className="scroll pad-nav">
-
-        {/* ── Top Header ── */}
-        <div style={{ background:'var(--white)', padding:'14px 18px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--border)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <img src={logo} alt="KP" style={{ width:36,height:36,borderRadius:10,objectFit:'contain' }} />
-            <div>
-              <div style={{ fontSize:12,color:'var(--text-light)',fontWeight:500 }}>Welcome to Krisha Pure</div>
-              <div style={{ fontFamily:'var(--font-serif)',fontSize:19,fontWeight:700,color:'var(--text)',display:'flex',alignItems:'center',gap:6,lineHeight:1.2 }}>
-                Eat Pure. Live Well. <span style={{ fontSize:16 }}>🌿</span>
-              </div>
-            </div>
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ position:'relative',cursor:'pointer' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-              <span style={{ position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:9,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center' }}>2</span>
-            </div>
-            <div onClick={()=>nav('/profile')} style={{ width:36,height:36,borderRadius:'50%',background:'var(--green)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,cursor:'pointer' }}>
-              {initials(f?.familyName)}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Address bar ── */}
-        <div className="addr-bar" onClick={()=>setAddrSheet(true)}>
-          <div className="addr-icon">🏠</div>
-          <div style={{ flex:1,minWidth:0 }}>
-            <div style={{ fontWeight:700,fontSize:13,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{addrLine1}</div>
-            <div style={{ fontSize:11,color:'var(--text-light)',letterSpacing:0.5 }}>{addr.flat&&`Flat ${addr.flat} · `}{addrLine2}</div>
-          </div>
-          <span style={{ fontSize:13,fontWeight:700,color:'var(--green)',flexShrink:0 }}>Change  ›</span>
-        </div>
 
         {/* ── Hero Banner ── */}
         <div style={{ margin:'0 16px 16px', borderRadius:16, overflow:'hidden', background:'linear-gradient(135deg,#EBF5EC 0%,#C8E6C9 60%,#A5D6A7 100%)', minHeight:145, position:'relative', cursor:'pointer' }} onClick={()=>nav('/recommend')}>

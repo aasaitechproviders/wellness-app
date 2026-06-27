@@ -75,7 +75,7 @@ export default function Schedule() {
       </div>
 
       {/* Scrollable content */}
-      <div className="page-shell-scroll" style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:18}}>
+      <div className="page-shell-scroll" style={{padding:'16px 18px 130px',display:'flex',flexDirection:'column',gap:18}}>
 
         {/* Address */}
         {family&&(

@@ -39,7 +39,7 @@ export default function ReviewOrder() {
       </div>
 
       {/* Scrollable content */}
-      <div className="page-shell-scroll" style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:12 }}>
+      <div className="page-shell-scroll" style={{ padding:'14px 18px 130px', display:'flex', flexDirection:'column', gap:12 }}>
 
         {/* Multi-basket summary */}
         {multiBasket ? (

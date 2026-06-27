@@ -78,7 +78,7 @@ export default function Cart() {
       </div>
 
       {/* ── SCROLLABLE CONTENT ── */}
-      <div className="page-shell-scroll" style={{ padding:'16px 18px 24px' }}>
+      <div className="page-shell-scroll" style={{ padding:'16px 18px 180px' }}>
 
         {cartCount === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'60vh', gap:16, textAlign:'center' }}>

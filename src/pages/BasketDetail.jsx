@@ -131,7 +131,7 @@ export default function BasketDetail() {
         </div>
 
         {/* Scrollable content */}
-        <div className="page-shell-scroll">
+        <div className="page-shell-scroll" style={{paddingBottom:'130px'}}>
 
         {/* ── VIEW MODE ── */}
         {view === 'view' && (
