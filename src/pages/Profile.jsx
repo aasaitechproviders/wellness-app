@@ -127,11 +127,17 @@ export default function Profile() {
   // ── Start editing family ──
   const startEditFamily = () => {
     const savedCity = f?.city || (cities[0] || '')
+
+    // Infer deliveryType: if an apartmentId is saved, they were using gated community
+    // even if the deliveryType field is null (older profiles didn't save this field)
+    const savedDeliveryType = f?.deliveryType
+      || (f?.apartmentId ? 'gated' : 'individual')
+
     setFe({
       familyName:           f?.familyName || '',
       email:                f?.email || '',
       city:                 savedCity,
-      deliveryType:         f?.deliveryType || 'individual',
+      deliveryType:         savedDeliveryType,
       apartmentId:          f?.apartmentId || '',
       apartmentName:        f?.apartmentName || '',
       towerNo:              f?.towerNo || '',
@@ -142,7 +148,8 @@ export default function Profile() {
       deliveryPreference:   f?.deliveryPreference || 'Morning',
       deliveryInstructions: f?.deliveryInstructions || '',
     })
-    // Pre-load apartments for current city
+
+    // Always pre-load apartments so the picker is ready when gated is selected
     if (savedCity) loadApartments(savedCity)
     setEditSection('family')
   }
@@ -690,7 +697,9 @@ export default function Profile() {
                       {apartments.map(apt => {
                         const aid   = apt._id?.toString() || apt.apartmentId
                         const aname = apt.apartmentName || apt.name
-                        const sel   = fe.apartmentId===aid || fe.apartmentName===aname
+                        // Match on MongoDB _id string, legacy apartmentId field, OR name
+                        const sel   = (fe.apartmentId && (fe.apartmentId === aid || fe.apartmentId === String(apt.apartmentId)))
+                                   || (fe.apartmentName && fe.apartmentName === aname)
                         return (
                           <div key={aid}
                             onClick={()=>setFe(p=>({

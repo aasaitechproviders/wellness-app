@@ -445,7 +445,8 @@ export default function Setup() {
                         {apartments.map(apt=>{
                           const aid   = apt._id?.toString()||apt.apartmentId
                           const aname = apt.apartmentName||apt.name
-                          const sel   = aptId===aid || aptName===aname
+                          const sel   = (aptId && (aptId === aid || aptId === String(apt.apartmentId)))
+                                     || (aptName && aptName === aname)
                           return (
                             <div key={aid} onClick={()=>handleAptSelect(apt)}
                               style={{padding:'12px 14px',borderRadius:12,border:`2px solid ${sel?'var(--green)':'var(--border)'}`,background:sel?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:10}}>
