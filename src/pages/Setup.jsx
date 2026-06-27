@@ -183,8 +183,12 @@ export default function Setup() {
   }
 
   const handleAptSelect = (apt) => {
-    setAptId(apt._id || apt.apartmentId || '')
+    setAptId(apt._id?.toString() || apt.apartmentId || '')
     setAptName(apt.apartmentName || apt.name || '')
+    // Auto-fill apartment-level address details
+    if (apt.landmark) setLandmark(apt.landmark)
+    if (apt.pincode)  setPincode(apt.pincode)
+    // Note: tower/flat are user-specific — left for user to fill
   }
 
   /* helpers */
@@ -404,17 +408,22 @@ export default function Setup() {
                     {aptLoading ? (
                       <div style={{padding:'12px',textAlign:'center',color:'var(--text-light)',fontSize:13}}>Loading apartments…</div>
                     ) : apartments.length > 0 ? (
-                      <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:200,overflowY:'auto'}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:220,overflowY:'auto'}}>
                         {apartments.map(apt=>{
-                          const aid = apt._id?.toString()||apt.apartmentId
+                          const aid   = apt._id?.toString()||apt.apartmentId
                           const aname = apt.apartmentName||apt.name
-                          const sel = aptId===aid || aptName===aname
+                          const sel   = aptId===aid || aptName===aname
                           return (
                             <div key={aid} onClick={()=>handleAptSelect(apt)}
                               style={{padding:'12px 14px',borderRadius:12,border:`2px solid ${sel?'var(--green)':'var(--border)'}`,background:sel?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:10}}>
                               <div style={{flex:1}}>
                                 <div style={{fontSize:13,fontWeight:700,color:sel?'var(--green)':'var(--text)'}}>{aname}</div>
-                                {apt.city&&<div style={{fontSize:11,color:'var(--text-light)',marginTop:1}}>{apt.city}</div>}
+                                {apt.address&&<div style={{fontSize:11,color:'var(--text-light)',marginTop:1}}>{apt.address}</div>}
+                                {(apt.city||apt.pincode)&&(
+                                  <div style={{fontSize:11,color:'var(--text-light)',marginTop:1}}>
+                                    {[apt.city, apt.pincode].filter(Boolean).join(' · ')}
+                                  </div>
+                                )}
                               </div>
                               {sel&&<span style={{color:'var(--green)',fontSize:18,fontWeight:700}}>✓</span>}
                             </div>

@@ -557,11 +557,23 @@ export default function Profile() {
                         const sel   = fe.apartmentId===aid || fe.apartmentName===aname
                         return (
                           <div key={aid}
-                            onClick={()=>setFe(p=>({...p,apartmentId:aid,apartmentName:aname}))}
+                            onClick={()=>setFe(p=>({
+                              ...p,
+                              apartmentId:   aid,
+                              apartmentName: aname,
+                              // Auto-fill address details from apartment record
+                              ...(apt.landmark && !p.landmark ? { landmark: apt.landmark } : {}),
+                              ...(apt.pincode  && !p.pincode  ? { pincode:  apt.pincode  } : {}),
+                            }))}
                             style={{ padding:'12px 14px',borderRadius:12,border:`2px solid ${sel?'var(--green)':'var(--border)'}`,background:sel?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:10 }}>
                             <div style={{ flex:1 }}>
                               <div style={{ fontSize:13,fontWeight:700,color:sel?'var(--green)':'var(--text)' }}>{aname}</div>
-                              {apt.city && <div style={{ fontSize:11,color:'var(--text-light)',marginTop:1 }}>{apt.city}</div>}
+                              {apt.address && <div style={{ fontSize:11,color:'var(--text-light)',marginTop:1 }}>{apt.address}</div>}
+                              {(apt.city||apt.pincode) && (
+                                <div style={{ fontSize:11,color:'var(--text-light)',marginTop:1 }}>
+                                  {[apt.city, apt.pincode].filter(Boolean).join(' · ')}
+                                </div>
+                              )}
                             </div>
                             {sel && <span style={{ color:'var(--green)',fontSize:18,fontWeight:700 }}>✓</span>}
                           </div>
