@@ -32,6 +32,21 @@ const ALLERGY_OPT = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']
 
 const HC_FALLBACK = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues','Liver Issues']
 
+const VEGETABLES_LIST = [
+  'Tomato','Onion','Potato','Carrot','Cabbage','Cauliflower','Broccoli','Spinach',
+  'Bitter Gourd','Bottle Gourd','Ridge Gourd','Snake Gourd','Drumstick','Lady Finger',
+  'Brinjal','Beetroot','Radish','Turnip','Sweet Potato','Yam','Pumpkin','Ash Gourd',
+  'Ivy Gourd','Cluster Beans','French Beans','Green Peas','Corn','Mushroom','Capsicum',
+  'Cucumber','Raw Banana','Methi','Coriander','Mint','Drumstick Leaves','Colocasia',
+]
+
+const FRUITS_LIST = [
+  'Mango','Banana','Apple','Orange','Grapes','Papaya','Guava','Pineapple','Watermelon',
+  'Muskmelon','Pomegranate','Sapota','Jackfruit','Coconut','Litchi','Plum','Pear',
+  'Strawberry','Kiwi','Avocado','Lemon','Sweet Lime','Gooseberry','Fig','Date',
+  'Custard Apple','Dragon Fruit','Raw Mango',
+]
+
 const InfoRow = ({ label, value }) => value ? (
   <div style={{ marginBottom:8 }}>
     <div style={{ fontSize:10,fontWeight:700,letterSpacing:0.5,textTransform:'uppercase',color:'var(--text-light)' }}>{label}</div>
@@ -191,6 +206,8 @@ export default function Profile() {
       dislikedFruit:       [...(m.dislikedFruit || [])],
       vegFruitRestriction: m.vegFruitRestriction ?? false,
       preferredPlan:       m.preferredPlan || '',
+      _vegQ:               '',
+      _fruitQ:             '',
     })
     setEditSection(m.memberId)
     setGoalSearch(''); setHcSearch('')
@@ -217,6 +234,8 @@ export default function Profile() {
       dislikedFruit:       [],
       vegFruitRestriction: false,
       preferredPlan:       '',
+      _vegQ:               '',
+      _fruitQ:             '',
     })
     setEditSection('new')
     setGoalSearch(''); setHcSearch('')
@@ -395,7 +414,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Health Challenges — DB driven */}
+      {/* Health Challenges — search-only reveal */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
           Health Challenges <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(optional)</span>
@@ -405,24 +424,77 @@ export default function Profile() {
           {(me.healthChallenges||[]).map(h=>(
             <button key={h} onClick={()=>toggleHC(h)}
               style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-              {h} ×
+              {h} <span style={{fontWeight:700}}>×</span>
             </button>
           ))}
-          {hcList
-            .filter(h => {
-              const name = typeof h==='string' ? h : h.name||''
-              return name.toLowerCase().includes(hcSearch.toLowerCase()) && !(me.healthChallenges||[]).includes(name)
-            })
-            .map(h => {
-              const name = typeof h==='string' ? h : h.name||''
-              return (
-                <button key={name} onClick={()=>toggleHC(name)}
-                  style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
-                  + {name}
-                </button>
-              )
-            })
+          {hcSearch.trim() && hcList
+            .filter(h => { const n=typeof h==='string'?h:h.name||''; return n.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(n) })
+            .map(h => { const n=typeof h==='string'?h:h.name||''; return (
+              <button key={n} onClick={()=>toggleHC(n)}
+                style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
+                + {n}
+              </button>
+            )})
           }
+          {!hcSearch.trim() && !(me.healthChallenges||[]).length && (
+            <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
+          )}
+        </div>
+      </div>
+
+      {/* Disliked Vegetables */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
+          Disliked Vegetables <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(optional)</span>
+        </div>
+        <input className="inp no-ico" placeholder="Search vegetables to exclude…" value={me._vegQ||''} onChange={e=>setMe(p=>({...p,_vegQ:e.target.value}))} style={{ marginBottom:8,fontSize:12 }} />
+        <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
+          {(me.dislikedVeg||[]).map(v=>(
+            <button key={v} onClick={()=>setMe(p=>({...p,dislikedVeg:(p.dislikedVeg||[]).filter(x=>x!==v)}))}
+              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
+              {v} <span style={{fontWeight:700}}>×</span>
+            </button>
+          ))}
+          {(me._vegQ||'').trim() && VEGETABLES_LIST
+            .filter(v=>v.toLowerCase().includes((me._vegQ||'').toLowerCase())&&!(me.dislikedVeg||[]).includes(v))
+            .map(v=>(
+              <button key={v} onClick={()=>setMe(p=>({...p,dislikedVeg:[...(p.dislikedVeg||[]),v],_vegQ:''}))}
+                style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
+                + {v}
+              </button>
+            ))
+          }
+          {!(me._vegQ||'').trim() && !(me.dislikedVeg||[]).length && (
+            <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
+          )}
+        </div>
+      </div>
+
+      {/* Disliked Fruits */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
+          Disliked Fruits <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(optional)</span>
+        </div>
+        <input className="inp no-ico" placeholder="Search fruits to exclude…" value={me._fruitQ||''} onChange={e=>setMe(p=>({...p,_fruitQ:e.target.value}))} style={{ marginBottom:8,fontSize:12 }} />
+        <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
+          {(me.dislikedFruit||[]).map(f=>(
+            <button key={f} onClick={()=>setMe(p=>({...p,dislikedFruit:(p.dislikedFruit||[]).filter(x=>x!==f)}))}
+              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
+              {f} <span style={{fontWeight:700}}>×</span>
+            </button>
+          ))}
+          {(me._fruitQ||'').trim() && FRUITS_LIST
+            .filter(f=>f.toLowerCase().includes((me._fruitQ||'').toLowerCase())&&!(me.dislikedFruit||[]).includes(f))
+            .map(f=>(
+              <button key={f} onClick={()=>setMe(p=>({...p,dislikedFruit:[...(p.dislikedFruit||[]),f],_fruitQ:''}))}
+                style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
+                + {f}
+              </button>
+            ))
+          }
+          {!(me._fruitQ||'').trim() && !(me.dislikedFruit||[]).length && (
+            <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
+          )}
         </div>
       </div>
 
@@ -457,11 +529,6 @@ export default function Profile() {
             return <button key={a} onClick={()=>toggleAllergy(a)} className={`pill${on?' on':''}`}>{on&&'✓ '}{a}</button>
           })}
         </div>
-      </div>
-
-      {/* Veg/Fruit restrictions note */}
-      <div style={{ marginBottom:16,padding:'10px 12px',background:'#F8F8F8',borderRadius:8,fontSize:12,color:'var(--text-light)' }}>
-        ℹ️ To update vegetable or fruit restrictions, please go through the setup flow again.
       </div>
 
       {/* Action buttons */}

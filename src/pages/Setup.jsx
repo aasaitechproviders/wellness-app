@@ -42,6 +42,21 @@ const DELIVERY_SLOTS = [
   {id:'evening',  emoji:'🌙',label:'Evening',  time:'5 PM – 9 PM'},
 ]
 
+const VEGETABLES = [
+  'Tomato','Onion','Potato','Carrot','Cabbage','Cauliflower','Broccoli','Spinach',
+  'Bitter Gourd','Bottle Gourd','Ridge Gourd','Snake Gourd','Drumstick','Lady Finger',
+  'Brinjal','Beetroot','Radish','Turnip','Sweet Potato','Yam','Pumpkin','Ash Gourd',
+  'Ivy Gourd','Cluster Beans','French Beans','Green Peas','Corn','Mushroom','Capsicum',
+  'Cucumber','Raw Banana','Methi','Coriander','Mint','Drumstick Leaves','Colocasia',
+]
+
+const FRUITS = [
+  'Mango','Banana','Apple','Orange','Grapes','Papaya','Guava','Pineapple','Watermelon',
+  'Muskmelon','Pomegranate','Sapota','Jackfruit','Coconut','Litchi','Plum','Pear',
+  'Strawberry','Kiwi','Avocado','Lemon','Sweet Lime','Gooseberry','Fig','Date',
+  'Custard Apple','Dragon Fruit','Raw Mango',
+]
+
 const calcBMI = (h,w) => { const hm=parseFloat(h)/100; if(!hm||!w) return null; return (parseFloat(w)/(hm*hm)).toFixed(1) }
 const bmiInfo = b => { if(!b) return null; const v=parseFloat(b); if(v<18.5) return{label:'Underweight',color:'#E67E22'}; if(v<25) return{label:'Normal',color:'#27AE60'}; if(v<30) return{label:'Overweight',color:'#E67E22'}; return{label:'Obese',color:'#E53935'} }
 const initials = (n='') => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()
@@ -113,14 +128,15 @@ export default function Setup() {
   const [hcQ,       setHcQ]       = useState('')
 
   /* ── Step 3 ── */
-  const [diet,    setDiet]    = useState('Vegetarian')
-  const [vegRestr,setVegRestr]= useState(false)
-  const [vegQ,    setVegQ]    = useState('')
-  const [fruitQ,  setFruitQ]  = useState('')
-  const [taste,   setTaste]   = useState([])
-  const [cook,    setCook]    = useState([])
-  const [allergy, setAllergy] = useState(['None'])
-  const [prefPlan,setPrefPlan]= useState('weekly')
+  const [diet,         setDiet]         = useState('Vegetarian')
+  const [vegQ,         setVegQ]         = useState('')
+  const [fruitQ,       setFruitQ]       = useState('')
+  const [dislikedVeg,  setDislikedVeg]  = useState([])
+  const [dislikedFruit,setDislikedFruit]= useState([])
+  const [taste,        setTaste]        = useState([])
+  const [cook,         setCook]         = useState([])
+  const [allergy,      setAllergy]      = useState(['None'])
+  const [prefPlan,     setPrefPlan]     = useState('weekly')
 
   /* ── Load all DB data on mount ── */
   useEffect(() => {
@@ -261,12 +277,22 @@ export default function Setup() {
         for (const m of members) {
           try {
             await api.addMember(fam._id, {
-              name: m.name, gender: m.gender, age: ageOf(m.dob),
-              height: parseFloat(m.height)||null, weight: parseFloat(m.weight)||null,
-              activityLevel: m.activity, relationship: m.rel,
-              wellnessGoals: mGoals[m._tid]||[], healthChallenges: mHC[m._tid]||[],
-              tastePref: taste, cookPref: cook, dietType: diet,
+              name:                m.name,
+              gender:              m.gender,
+              age:                 ageOf(m.dob),
+              height:              parseFloat(m.height)||null,
+              weight:              parseFloat(m.weight)||null,
+              activityLevel:       m.activity,
+              relationship:        m.rel,
+              dietType:            diet,
+              wellnessGoals:       mGoals[m._tid]  || [],
+              healthChallenges:    mHC[m._tid]     || [],
+              dislikedVeg:         dislikedVeg,
+              dislikedFruit:       dislikedFruit,
+              tastePref:           taste,
+              cookPref:            cook,
               dietaryRestrictions: allergy.filter(a=>a!=='None'),
+              preferredPlan:       prefPlan,
             })
           } catch(e){ console.warn('Member add error:',e) }
         }
@@ -673,21 +699,29 @@ export default function Setup() {
               </div>
               <div className="input-row" style={{marginBottom:10}}>
                 <span className="input-ico">🔍</span>
-                <input className="inp" placeholder="Search health challenges" value={hcQ} onChange={e=>setHcQ(e.target.value)}/>
+                <input className="inp" placeholder="Search health challenges…" value={hcQ} onChange={e=>setHcQ(e.target.value)}/>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+                {/* Selected chips always visible */}
                 {curHC.map(h=>(
                   <button key={h} onClick={()=>curMem&&toggleHC(curMem._tid,h)}
                     style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                    {h} ×
+                    {h} <span style={{fontWeight:700}}>×</span>
                   </button>
                 ))}
-                {hcFiltered.filter(h=>!curHC.includes(hcName(h))).map(h=>(
+                {/* Unselected options only when user is searching */}
+                {hcQ.trim() && hcFiltered.filter(h=>!curHC.includes(hcName(h))).map(h=>(
                   <button key={hcName(h)} onClick={()=>curMem&&toggleHC(curMem._tid,hcName(h))}
                     style={{padding:'6px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
                     + {hcName(h)}
                   </button>
                 ))}
+                {/* Empty state hint */}
+                {!hcQ.trim() && curHC.length===0 && (
+                  <div style={{fontSize:12,color:'var(--text-light)',padding:'4px 0'}}>
+                    Type above to search and add health challenges
+                  </div>
+                )}
               </div>
             </div>
 
@@ -730,26 +764,75 @@ export default function Setup() {
               </div>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div className="card">
-                <SecH emoji="🥬" title="Veg / Fruit Restrictions"/>
-                <div style={{fontSize:11,color:'var(--text-light)',marginBottom:8}}>Any allergies or ingredients to avoid?</div>
-                <div style={{display:'flex',gap:6,marginBottom:8}}>
-                  {[{v:true,l:'Yes'},{v:false,l:'No restrictions'}].map(o=>(
-                    <button key={String(o.v)} onClick={()=>setVegRestr(o.v)}
-                      style={{flex:1,padding:'8px 6px',borderRadius:8,border:`1.5px solid ${vegRestr===o.v?'var(--green)':'var(--border)'}`,background:vegRestr===o.v?'var(--green-pale)':'var(--white)',color:vegRestr===o.v?'var(--green)':'var(--text-mid)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-                      {vegRestr===o.v&&'✅ '}{o.l}
-                    </button>
-                  ))}
-                </div>
-                {vegRestr&&<input className="inp no-ico" placeholder="Search vegetables & greens..." value={vegQ} onChange={e=>setVegQ(e.target.value)} style={{fontSize:12}}/>}
-                {vegRestr&&<div style={{fontSize:10,color:'var(--text-light)',marginTop:4}}>Selected items will be excluded from your basket</div>}
+            {/* Vegetable Restrictions */}
+            <div className="card">
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                <span style={{fontSize:18}}>🥬</span>
+                <span style={{fontSize:14,fontWeight:700}}>Disliked Vegetables</span>
+                <span style={{fontSize:11,color:'var(--text-light)'}}>(Optional)</span>
               </div>
-              <div className="card">
-                <SecH emoji="🍊" title="Fruit Restrictions"/>
-                <div style={{fontSize:11,color:'var(--text-light)',marginBottom:8}}>Any fruits you prefer to avoid?</div>
-                <input className="inp no-ico" placeholder="Search fruits..." value={fruitQ} onChange={e=>setFruitQ(e.target.value)} style={{fontSize:12}}/>
-                <div style={{fontSize:10,color:'var(--text-light)',marginTop:4}}>Selected items will be excluded from your basket</div>
+              <div style={{fontSize:12,color:'var(--text-light)',marginBottom:10}}>These will be excluded from your baskets</div>
+              <div className="input-row" style={{marginBottom:10}}>
+                <span className="input-ico">🔍</span>
+                <input className="inp" placeholder="Search vegetables to exclude…" value={vegQ} onChange={e=>setVegQ(e.target.value)}/>
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+                {/* Selected chips */}
+                {dislikedVeg.map(v=>(
+                  <button key={v} onClick={()=>setDislikedVeg(p=>p.filter(x=>x!==v))}
+                    style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                    {v} <span style={{fontWeight:700}}>×</span>
+                  </button>
+                ))}
+                {/* Search results (only when searching) */}
+                {vegQ.trim() && VEGETABLES
+                  .filter(v=>v.toLowerCase().includes(vegQ.toLowerCase()) && !dislikedVeg.includes(v))
+                  .map(v=>(
+                    <button key={v} onClick={()=>{setDislikedVeg(p=>[...p,v]);setVegQ('')}}
+                      style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
+                      + {v}
+                    </button>
+                  ))
+                }
+                {!vegQ.trim() && dislikedVeg.length===0 && (
+                  <div style={{fontSize:12,color:'var(--text-light)',padding:'2px 0'}}>Search to add vegetables you dislike</div>
+                )}
+              </div>
+            </div>
+
+            {/* Fruit Restrictions */}
+            <div className="card">
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                <span style={{fontSize:18}}>🍊</span>
+                <span style={{fontSize:14,fontWeight:700}}>Disliked Fruits</span>
+                <span style={{fontSize:11,color:'var(--text-light)'}}>(Optional)</span>
+              </div>
+              <div style={{fontSize:12,color:'var(--text-light)',marginBottom:10}}>These will be excluded from your baskets</div>
+              <div className="input-row" style={{marginBottom:10}}>
+                <span className="input-ico">🔍</span>
+                <input className="inp" placeholder="Search fruits to exclude…" value={fruitQ} onChange={e=>setFruitQ(e.target.value)}/>
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+                {/* Selected chips */}
+                {dislikedFruit.map(f=>(
+                  <button key={f} onClick={()=>setDislikedFruit(p=>p.filter(x=>x!==f))}
+                    style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                    {f} <span style={{fontWeight:700}}>×</span>
+                  </button>
+                ))}
+                {/* Search results (only when searching) */}
+                {fruitQ.trim() && FRUITS
+                  .filter(f=>f.toLowerCase().includes(fruitQ.toLowerCase()) && !dislikedFruit.includes(f))
+                  .map(f=>(
+                    <button key={f} onClick={()=>{setDislikedFruit(p=>[...p,f]);setFruitQ('')}}
+                      style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
+                      + {f}
+                    </button>
+                  ))
+                }
+                {!fruitQ.trim() && dislikedFruit.length===0 && (
+                  <div style={{fontSize:12,color:'var(--text-light)',padding:'2px 0'}}>Search to add fruits you dislike</div>
+                )}
               </div>
             </div>
 

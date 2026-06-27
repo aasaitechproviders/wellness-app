@@ -196,11 +196,11 @@ export default function Goals() {
             {curHC.map(ch=>(
               <button key={ch} onClick={()=>cur&&toggleHC(cur.memberId,ch)}
                 style={{ display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer' }}>
-                {ch} <span>×</span>
+                {ch} <span style={{fontWeight:700}}>×</span>
               </button>
             ))}
-            {/* Unselected options from DB */}
-            {hcList
+            {/* Unselected options only when user is searching */}
+            {hcQ.trim() && hcList
               .filter(c => {
                 const name = typeof c === 'string' ? c : c.name || ''
                 return name.toLowerCase().includes(hcQ.toLowerCase()) && !curHC.includes(name)
@@ -215,6 +215,9 @@ export default function Goals() {
                 )
               })
             }
+            {!hcQ.trim() && curHC.length===0 && (
+              <div style={{fontSize:12,color:'var(--text-light)',padding:'2px 0'}}>Type above to search and add health challenges</div>
+            )}
           </div>
         </div>
 
