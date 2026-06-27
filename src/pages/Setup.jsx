@@ -95,9 +95,7 @@ export default function Setup() {
   const [aptLoading, setAptLoading] = useState(false)
   const [apiGoals,   setApiGoals]   = useState([])        // from /wellness/goals
   const [apiHC,      setApiHC]      = useState([])        // from /delivery/health-challenges
-  const [apiTaste,   setApiTaste]   = useState([])        // from DB or fallback
-  const [apiCooking, setApiCooking] = useState([])
-  const [apiAllergy, setApiAllergy] = useState([])
+  const [apiPrefs,   setApiPrefs]   = useState({taste:[],cooking:[],allergy:[]}) // from /delivery/preferences
 
   /* ── Step 0 ── */
   const [name,     setName]     = useState('')
@@ -137,8 +135,14 @@ export default function Setup() {
   const [dislikedFruit,setDislikedFruit]= useState([])
   const [taste,        setTaste]        = useState([])
   const [cook,         setCook]         = useState([])
-  const [allergy,      setAllergy]      = useState(['None'])
+  const [allergy,      setAllergy]      = useState([])
   const [prefPlan,     setPrefPlan]     = useState('weekly')
+  const [otherTaste,   setOtherTaste]   = useState('')
+  const [otherCook,    setOtherCook]    = useState('')
+  const [otherAllergy, setOtherAllergy] = useState('')
+  const [showOtherTaste,   setShowOtherTaste]   = useState(false)
+  const [showOtherCook,    setShowOtherCook]    = useState(false)
+  const [showOtherAllergy, setShowOtherAllergy] = useState(false)
 
   /* ── Load all DB data on mount ── */
   useEffect(() => {
@@ -154,6 +158,9 @@ export default function Setup() {
 
     // Load health challenges from DB
     api.getHealthChallenges().then(d => setApiHC(d.challenges||[])).catch(()=>{})
+
+    // Load taste/cooking/allergy preferences from DB
+    api.getPreferences().then(d => setApiPrefs(d)).catch(()=>{})
 
     // Load family data and pre-fill all fields
     if (!family?._id) return
@@ -222,10 +229,7 @@ export default function Setup() {
   const toggleHC    = (tid,h) => setMHC(p=>{const c=p[tid]||[];return{...p,[tid]:c.includes(h)?c.filter(x=>x!==h):[...c,h]}})
   const toggleTaste = t => setTaste(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
   const toggleCook  = c => setCook(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c])
-  const toggleAllergy = a => {
-    if(a==='None'){setAllergy(['None']);return}
-    setAllergy(p=>{const f=p.filter(x=>x!=='None');return f.includes(a)?f.filter(x=>x!==a):[...f,a]})
-  }
+  const toggleAllergy = a => setAllergy(p=>p.includes(a)?p.filter(x=>x!==a):[...p,a])
 
   const saveMember = () => {
     if(!newM.name.trim()) return showToast('Name is required','error')
@@ -293,7 +297,7 @@ export default function Setup() {
               dislikedFruit:       dislikedFruit,
               tastePref:           taste,
               cookPref:            cook,
-              dietaryRestrictions: allergy.filter(a=>a!=='None'),
+              dietaryRestrictions: allergy,
               preferredPlan:       prefPlan,
             })
           } catch(e){ console.warn('Member add error:',e) }
@@ -326,9 +330,10 @@ export default function Setup() {
   const hcName = h => typeof h==='string' ? h : h.name||''
 
   // Taste/cooking/allergy - these could come from DB in future, hardcode for now as they're UI patterns
-  const TASTE   = ['Sweet','Mild','Tangy','Spicy','Bitter']
-  const COOKING = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
-  const ALLERGY = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance','None']
+  // Preferences from DB (taste/cooking/allergy) with fallbacks
+  const TASTE   = apiPrefs.taste.length   ? apiPrefs.taste   : ['Sweet','Mild','Tangy','Spicy','Bitter']
+  const COOKING = apiPrefs.cooking.length ? apiPrefs.cooking : ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
+  const ALLERGY = apiPrefs.allergy.length ? apiPrefs.allergy : ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']
 
   return (
     <div className="page">
@@ -848,6 +853,7 @@ export default function Setup() {
               )}
             </div>
 
+            {/* Preferred Taste — DB driven */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
                 <span style={{fontSize:18}}>💗</span><span style={{fontSize:14,fontWeight:700}}>Preferred Taste</span>
@@ -855,9 +861,25 @@ export default function Setup() {
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
                 {TASTE.map(t=><button key={t} onClick={()=>toggleTaste(t)} className={`pill${taste.includes(t)?' on':''}`}>{taste.includes(t)&&'✓ '}{t}</button>)}
+                {/* Custom taste chips added via Others */}
+                {taste.filter(t=>!TASTE.includes(t)).map(t=>(
+                  <button key={t} onClick={()=>toggleTaste(t)} className="pill on">✓ {t} ×</button>
+                ))}
+                {showOtherTaste ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:130,outline:'none'}}
+                      placeholder="Type & press Enter" value={otherTaste} autoFocus
+                      onChange={e=>setOtherTaste(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'&&otherTaste.trim()){setTaste(p=>[...p,otherTaste.trim()]);setOtherTaste('');setShowOtherTaste(false)}if(e.key==='Escape')setShowOtherTaste(false)}}/>
+                    <button onClick={()=>{if(otherTaste.trim()){setTaste(p=>[...p,otherTaste.trim()]);setOtherTaste('');setShowOtherTaste(false)}}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+                  </div>
+                ) : (
+                  <button onClick={()=>setShowOtherTaste(true)} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+                )}
               </div>
             </div>
 
+            {/* Cooking Preference — DB driven */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
                 <span style={{fontSize:18}}>👨‍🍳</span><span style={{fontSize:14,fontWeight:700}}>Cooking Preference</span>
@@ -865,9 +887,24 @@ export default function Setup() {
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
                 {COOKING.map(c=><button key={c} onClick={()=>toggleCook(c)} className={`pill${cook.includes(c)?' on':''}`}>{cook.includes(c)&&'✓ '}{c}</button>)}
+                {cook.filter(c=>!COOKING.includes(c)).map(c=>(
+                  <button key={c} onClick={()=>toggleCook(c)} className="pill on">✓ {c} ×</button>
+                ))}
+                {showOtherCook ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
+                      placeholder="Type & press Enter" value={otherCook} autoFocus
+                      onChange={e=>setOtherCook(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'&&otherCook.trim()){setCook(p=>[...p,otherCook.trim()]);setOtherCook('');setShowOtherCook(false)}if(e.key==='Escape')setShowOtherCook(false)}}/>
+                    <button onClick={()=>{if(otherCook.trim()){setCook(p=>[...p,otherCook.trim()]);setOtherCook('');setShowOtherCook(false)}}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+                  </div>
+                ) : (
+                  <button onClick={()=>setShowOtherCook(true)} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+                )}
               </div>
             </div>
 
+            {/* Allergies & Restrictions — DB driven */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
                 <span style={{fontSize:18}}>🛡️</span><span style={{fontSize:14,fontWeight:700}}>Allergies & Restrictions</span>
@@ -875,6 +912,20 @@ export default function Setup() {
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
                 {ALLERGY.map(a=><button key={a} onClick={()=>toggleAllergy(a)} className={`pill${allergy.includes(a)?' on':''}`}>{allergy.includes(a)&&'✓ '}{a}</button>)}
+                {allergy.filter(a=>!ALLERGY.includes(a)).map(a=>(
+                  <button key={a} onClick={()=>toggleAllergy(a)} className="pill on">✓ {a} ×</button>
+                ))}
+                {showOtherAllergy ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
+                      placeholder="Type & press Enter" value={otherAllergy} autoFocus
+                      onChange={e=>setOtherAllergy(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'&&otherAllergy.trim()){setAllergy(p=>[...p,otherAllergy.trim()]);setOtherAllergy('');setShowOtherAllergy(false)}if(e.key==='Escape')setShowOtherAllergy(false)}}/>
+                    <button onClick={()=>{if(otherAllergy.trim()){setAllergy(p=>[...p,otherAllergy.trim()]);setOtherAllergy('');setShowOtherAllergy(false)}}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+                  </div>
+                ) : (
+                  <button onClick={()=>setShowOtherAllergy(true)} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+                )}
               </div>
             </div>
 

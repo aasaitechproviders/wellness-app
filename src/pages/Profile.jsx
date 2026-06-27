@@ -26,9 +26,6 @@ const ACTIVITY = [
   {id:'moderate', label:'Moderately Active',emoji:'🏃'},
   {id:'high',     label:'Highly Active', emoji:'🏋️'},
 ]
-const TASTE_OPT = ['Sweet','Mild','Tangy','Spicy','Bitter']
-const COOK_OPT  = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
-const ALLERGY_OPT = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']
 
 const HC_FALLBACK = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues','Liver Issues']
 
@@ -73,6 +70,7 @@ export default function Profile() {
   const [f,          setF]          = useState(null)
   const [apiGoals,   setApiGoals]   = useState([])   // from DB
   const [apiHC,      setApiHC]      = useState([])   // from DB
+  const [apiPrefs,   setApiPrefs]   = useState({taste:[],cooking:[],allergy:[]}) // from DB
   const [cities,     setCities]     = useState([])   // from DB
   const [apartments, setApartments] = useState([])   // from DB
   const [aptLoading, setAptLoading] = useState(false)
@@ -92,6 +90,7 @@ export default function Profile() {
     // Load all DB data in parallel
     api.getGoals().then(d => setApiGoals(d.goals||[])).catch(()=>{})
     api.getHealthChallenges().then(d => setApiHC(d.challenges||[])).catch(()=>{})
+    api.getPreferences().then(d => setApiPrefs(d)).catch(()=>{})
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     try {
       const d = await api.getFamily(family._id)
@@ -526,36 +525,78 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Preferred Taste */}
+      {/* Preferred Taste — DB driven */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Preferred Taste</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {TASTE_OPT.map(t=>{
+          {(apiPrefs.taste.length ? apiPrefs.taste : ['Sweet','Mild','Tangy','Spicy','Bitter']).map(t=>{
             const on=(me.tastePref||[]).includes(t)
             return <button key={t} onClick={()=>toggleTaste(t)} className={`pill${on?' on':''}`}>{on&&'✓ '}{t}</button>
           })}
+          {(me.tastePref||[]).filter(t=>!(apiPrefs.taste.length?apiPrefs.taste:['Sweet','Mild','Tangy','Spicy','Bitter']).includes(t)).map(t=>(
+            <button key={t} onClick={()=>toggleTaste(t)} className="pill on">✓ {t} ×</button>
+          ))}
+          {me._showOtherTaste ? (
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:130,outline:'none'}}
+                placeholder="Type & press Enter" value={me._otherTaste||''} autoFocus
+                onChange={e=>setMe(p=>({...p,_otherTaste:e.target.value}))}
+                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherTaste||'').trim()){setMe(p=>({...p,tastePref:[...(p.tastePref||[]),p._otherTaste.trim()],_otherTaste:'',_showOtherTaste:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherTaste:false}))}}/>
+              <button onClick={()=>{if((me._otherTaste||'').trim())setMe(p=>({...p,tastePref:[...(p.tastePref||[]),p._otherTaste.trim()],_otherTaste:'',_showOtherTaste:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+            </div>
+          ) : (
+            <button onClick={()=>setMe(p=>({...p,_showOtherTaste:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+          )}
         </div>
       </div>
 
-      {/* Cooking Preference */}
+      {/* Cooking Preference — DB driven */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Cooking Preference</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {COOK_OPT.map(c=>{
+          {(apiPrefs.cooking.length ? apiPrefs.cooking : ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']).map(c=>{
             const on=(me.cookPref||[]).includes(c)
             return <button key={c} onClick={()=>toggleCook(c)} className={`pill${on?' on':''}`}>{on&&'✓ '}{c}</button>
           })}
+          {(me.cookPref||[]).filter(c=>!(apiPrefs.cooking.length?apiPrefs.cooking:['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']).includes(c)).map(c=>(
+            <button key={c} onClick={()=>toggleCook(c)} className="pill on">✓ {c} ×</button>
+          ))}
+          {me._showOtherCook ? (
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
+                placeholder="Type & press Enter" value={me._otherCook||''} autoFocus
+                onChange={e=>setMe(p=>({...p,_otherCook:e.target.value}))}
+                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherCook||'').trim()){setMe(p=>({...p,cookPref:[...(p.cookPref||[]),p._otherCook.trim()],_otherCook:'',_showOtherCook:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherCook:false}))}}/>
+              <button onClick={()=>{if((me._otherCook||'').trim())setMe(p=>({...p,cookPref:[...(p.cookPref||[]),p._otherCook.trim()],_otherCook:'',_showOtherCook:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+            </div>
+          ) : (
+            <button onClick={()=>setMe(p=>({...p,_showOtherCook:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+          )}
         </div>
       </div>
 
-      {/* Allergies */}
+      {/* Allergies & Restrictions — DB driven */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies & Restrictions</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {ALLERGY_OPT.map(a=>{
+          {(apiPrefs.allergy.length ? apiPrefs.allergy : ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']).map(a=>{
             const on=(me.dietaryRestrictions||[]).includes(a)
             return <button key={a} onClick={()=>toggleAllergy(a)} className={`pill${on?' on':''}`}>{on&&'✓ '}{a}</button>
           })}
+          {(me.dietaryRestrictions||[]).filter(a=>!(apiPrefs.allergy.length?apiPrefs.allergy:['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']).includes(a)).map(a=>(
+            <button key={a} onClick={()=>toggleAllergy(a)} className="pill on">✓ {a} ×</button>
+          ))}
+          {me._showOtherAllergy ? (
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
+                placeholder="Type & press Enter" value={me._otherAllergy||''} autoFocus
+                onChange={e=>setMe(p=>({...p,_otherAllergy:e.target.value}))}
+                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherAllergy||'').trim()){setMe(p=>({...p,dietaryRestrictions:[...(p.dietaryRestrictions||[]),p._otherAllergy.trim()],_otherAllergy:'',_showOtherAllergy:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherAllergy:false}))}}/>
+              <button onClick={()=>{if((me._otherAllergy||'').trim())setMe(p=>({...p,dietaryRestrictions:[...(p.dietaryRestrictions||[]),p._otherAllergy.trim()],_otherAllergy:'',_showOtherAllergy:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
+            </div>
+          ) : (
+            <button onClick={()=>setMe(p=>({...p,_showOtherAllergy:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
+          )}
         </div>
       </div>
 

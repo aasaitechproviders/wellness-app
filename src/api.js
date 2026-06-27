@@ -53,6 +53,7 @@ export const api = {
   // Delivery
   getCities: () => req('GET', '/delivery/cities'),
   getHealthChallenges: () => req('GET', '/delivery/health-challenges'),
+  getPreferences: () => req('GET', '/delivery/preferences'),
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),
