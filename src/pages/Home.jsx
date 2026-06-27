@@ -30,6 +30,8 @@ export default function Home() {
     api.getFamily(family._id).then(d => {
       const f = d.family||family
       setFreshFamily(f)
+      // Keep AuthContext in sync so other pages see fresh data
+      if (f !== family) updateFamily(f)
       setAddr({ city:f.city||'Coimbatore', deliveryType:f.deliveryType||'individual', aptName:f.apartmentName||'', tower:f.towerNo||'', flat:f.flatNo||'', landmark:f.landmark||'', pincode:f.pincode||'' })
       const mems = (f.members||[]).filter(m=>m.wellnessGoals?.length)
       const bp = mems.length
@@ -50,7 +52,8 @@ export default function Home() {
   const saveAddr = async () => {
     setAddrSaving(true)
     try {
-      const r = await api.updateFamily(family._id,{ city:addr.city, deliveryType:addr.deliveryType, apartmentName:addr.aptName, towerNo:addr.tower, flatNo:addr.flat, landmark:addr.landmark, pincode:addr.pincode })
+      const addrStr = [addr.aptName, addr.tower && 'Tower '+addr.tower, addr.flat && 'Flat '+addr.flat, addr.landmark, addr.pincode].filter(Boolean).join(', ')
+      const r = await api.updateFamily(family._id,{ city:addr.city, address:addrStr||addr.aptName||'', apartmentName:addr.aptName, towerNo:addr.tower, flatNo:addr.flat, landmark:addr.landmark, pincode:addr.pincode })
       updateFamily(r.family||f); setFreshFamily(r.family||f)
       showToast('Address updated ✓','success'); setAddrSheet(false)
     } catch(e){ showToast(e.message,'error') } finally { setAddrSaving(false) }

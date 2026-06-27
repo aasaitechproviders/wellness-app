@@ -47,7 +47,10 @@ export default function Profile() {
       showToast(`${newMember.name} added!`, 'success')
       setNewMember({ name: '', age: '', gender: 'Female' })
       setAddingMember(false)
-      load()
+      // Re-fetch and sync AuthContext
+      const fresh = await api.getFamily(family._id)
+      if (fresh.family) { setFullFamily(fresh.family); updateFamily(fresh.family) }
+      else load()
     } catch(e) { showToast(e.message, 'error') }
   }
 

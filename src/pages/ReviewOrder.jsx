@@ -109,7 +109,7 @@ export default function ReviewOrder() {
               <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.8 }}>
                 <div style={{ fontWeight:600 }}>{family.apartmentName}</div>
                 <div>Flat {family.flatNo}{family.towerNo ? `, ${family.towerNo}` : ''}</div>
-                <div>{family.address}, {family.city}</div>
+                <div>{family.landmark ? family.landmark + ', ' : ''}{family.city || 'Coimbatore'}</div>
               </div>
             </div>
           </div>

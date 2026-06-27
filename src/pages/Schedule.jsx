@@ -84,7 +84,7 @@ export default function Schedule() {
             <div>
               <div style={{fontWeight:600,fontSize:13}}>{family.apartmentName}</div>
               <div style={{fontSize:12,color:'var(--text-mid)',marginTop:1}}>
-                Flat {family.flatNo}{family.towerNo?`, ${family.towerNo}`:''}, {family.address}, {family.city}
+                Flat {family.flatNo}{family.towerNo?`, ${family.towerNo}`:''}{family.landmark?`, ${family.landmark}`:''}, {family.city||'Coimbatore'}
               </div>
             </div>
           </div>

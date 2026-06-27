@@ -177,22 +177,72 @@ export default function Setup() {
     } else {
       setBusy(true)
       try {
-        let fam = family
         const phone = localStorage.getItem('kp_phone')||''
-        if(!fam?._id) {
-          const r = await api.registerFamily({ familyName:name, phone, email, city, deliveryType:dlvType, apartmentName:aptName, towerNo:tower, flatNo:flat, landmark, pincode, preferredDeliveryTime:prefTime, deliveryInstructions:dlvInstr, dietPreference:diet })
-          fam = r.family; updateFamily(fam)
+        let fam = family
+
+        // Step 1: register or update the family record
+        if (!fam?._id) {
+          // Build address string — backend requires this field
+          const addressStr = [aptName, tower && `Tower ${tower}`, flat && `Flat ${flat}`, landmark, pincode].filter(Boolean).join(', ')
+          const r = await api.registerFamily({
+            familyName:name, phone, email, city,
+            address: addressStr || aptName || 'N/A',
+            apartmentName:aptName || 'N/A',
+            towerNo:tower,
+            flatNo:flat || 'N/A',
+            landmark, pincode,
+            preferredDeliveryTime:prefTime, deliveryInstructions:dlvInstr,
+            dietPreference:diet,
+          })
+          fam = r.family
+          updateFamily(fam)
         } else {
-          const r = await api.updateFamily(fam._id,{ familyName:name, email, city, deliveryType:dlvType, apartmentName:aptName, towerNo:tower, flatNo:flat, landmark, pincode, preferredDeliveryTime:prefTime, deliveryInstructions:dlvInstr, dietPreference:diet })
-          fam = r.family||fam; updateFamily(fam)
+          const addressStr2 = [aptName, tower && `Tower ${tower}`, flat && `Flat ${flat}`, landmark, pincode].filter(Boolean).join(', ')
+          const r = await api.updateFamily(fam._id, {
+            familyName:name, email, city,
+            address: addressStr2 || aptName || '',
+            apartmentName:aptName,
+            towerNo:tower,
+            flatNo:flat,
+            landmark, pincode,
+            dietPreference:diet,
+          })
+          fam = r.family || fam
+          updateFamily(fam)
         }
-        for(const m of members) {
-          try { await api.addMember(fam._id,{ name:m.name, gender:m.gender, age:age(m.dob), height:parseFloat(m.height)||null, weight:parseFloat(m.weight)||null, activityLevel:m.activity, relationship:m.rel, wellnessGoals:mGoals[m._tid]||[], healthChallenges:mHC[m._tid]||[] }) } catch{}
+
+        // Step 2: add each member with their wellness goals attached
+        for (const m of members) {
+          try {
+            await api.addMember(fam._id, {
+              name:            m.name,
+              gender:          m.gender,
+              age:             age(m.dob),
+              height:          parseFloat(m.height) || null,
+              weight:          parseFloat(m.weight) || null,
+              activityLevel:   m.activity,
+              relationship:    m.rel,
+              wellnessGoals:   mGoals[m._tid] || [],
+              healthChallenges:mHC[m._tid]    || [],
+            })
+          } catch(addErr) {
+            console.warn('Member add failed:', addErr)
+          }
         }
-        showToast('Profile saved! 🎉','success')
-        nav('/home',{replace:true})
-      } catch(e){ showToast(e.message||'Save failed','error') }
-      finally{ setBusy(false) }
+
+        // Step 3: re-fetch family so AuthContext has fresh members with real memberIds
+        try {
+          const fresh = await api.getFamily(fam._id)
+          updateFamily(fresh.family || fam)
+        } catch {}
+
+        showToast('Profile saved! 🎉', 'success')
+        nav('/home', { replace:true })
+      } catch(e) {
+        showToast(e.message || 'Save failed', 'error')
+      } finally {
+        setBusy(false)
+      }
     }
   }
 

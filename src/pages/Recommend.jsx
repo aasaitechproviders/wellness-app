@@ -30,7 +30,8 @@ export default function Recommend() {
   useEffect(() => {
     api.getBaskets({}).then(d => setAllBaskets(d.baskets || [])).catch(() => {})
 
-    if (!result && family?._id) {
+    if (!result) {
+      if (!family?._id) { setLoading(false); return }
       api.getFamily(family._id)
         .then(d => {
           const m = (d.family?.members || []).filter(x => x.wellnessGoals?.length)

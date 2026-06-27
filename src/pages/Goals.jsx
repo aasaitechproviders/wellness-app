@@ -25,7 +25,7 @@ const HC_LIST = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','
 const initials = (n='') => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()
 
 export default function Goals() {
-  const { family } = useAuth()
+  const { family, updateFamily } = useAuth()
   const nav = useNavigate()
   const [apiGoals, setApiGoals] = useState([])
   const [members,  setMembers]  = useState([])
@@ -54,11 +54,30 @@ export default function Goals() {
   const go = async () => {
     setSaving(true)
     try {
-      for(const m of members) await api.updateMember(family._id,m.memberId,{wellnessGoals:local[m.memberId]||[]})
-      const upd=members.map(m=>({...m,wellnessGoals:local[m.memberId]||[]}))
-      const res=await api.recommend({members:upd.filter(m=>m.wellnessGoals.length)})
-      nav('/recommend',{state:{result:res.recommendation}})
-    }catch(e){showToast(e.message||'Failed','error')}finally{setSaving(false)}
+      // Save goals for each member
+      for (const m of members) {
+        await api.updateMember(family._id, m.memberId, { wellnessGoals: local[m.memberId] || [] })
+      }
+      // Build updated members list for recommendation
+      const upd = members.map(m => ({ ...m, wellnessGoals: local[m.memberId] || [] }))
+      const withGoals = upd.filter(m => m.wellnessGoals.length)
+      if (withGoals.length === 0) {
+        showToast('Please select at least one goal', 'error')
+        return
+      }
+      // Get recommendations
+      const res = await api.recommend({ members: withGoals })
+      // Update AuthContext so Home and other pages see fresh goals
+      try {
+        const fresh = await api.getFamily(family._id)
+        updateFamily(fresh.family)
+      } catch {}
+      nav('/recommend', { state: { result: res.recommendation } })
+    } catch(e) {
+      showToast(e.message || 'Failed', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const cur   = members[active]
