@@ -408,7 +408,7 @@ export default function Profile() {
       <div style={{ background:'linear-gradient(135deg,#1A3D20 0%,#2D6A35 100%)',padding:'20px 20px 24px',textAlign:'center',flexShrink:0 }}>
         <img src={logo} alt="KP" style={{ width:48,height:48,borderRadius:13,objectFit:'contain',marginBottom:8 }} />
         <div style={{ color:'#fff',fontFamily:'var(--font-serif)',fontSize:19,fontWeight:700 }}>
-          {fData?.familyName||'Your Family'}
+          {(fData?.familyName && !fData.familyName.startsWith('Family-')) ? fData.familyName : 'Your Family'}
         </div>
         <div style={{ color:'rgba(255,255,255,0.7)',fontSize:12,marginTop:3 }}>+91 {fData?.phone}</div>
         {fData?.city&&<div style={{ color:'rgba(255,255,255,0.55)',fontSize:11,marginTop:2 }}>📍 {fData.city}</div>}
@@ -430,10 +430,15 @@ export default function Profile() {
                 <input className="inp no-ico" type="email" value={fe.email||''} onChange={e=>setFe(p=>({...p,email:e.target.value}))} />
               </div>
               <div>
-                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>City</div>
-                <select className="sel" value={fe.city||'Coimbatore'} onChange={e=>setFe(p=>({...p,city:e.target.value}))}>
-                  <option>Coimbatore</option><option>Chennai</option>
-                </select>
+                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>City</div>
+                <div style={{display:'flex',gap:10}}>
+                  {['Coimbatore','Chennai'].map(c=>(
+                    <button key={c} onClick={()=>setFe(p=>({...p,city:c}))} type="button"
+                      style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${(fe.city||'Coimbatore')===c?'var(--green)':'var(--border)'}`,background:(fe.city||'Coimbatore')===c?'var(--green)':'var(--white)',color:(fe.city||'Coimbatore')===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s'}}>
+                      {(fe.city||'Coimbatore')===c?'✓ ':''}{c}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Apartment / Building</div>
@@ -458,16 +463,31 @@ export default function Profile() {
                 <input className="inp no-ico" placeholder="641001" maxLength={6} value={fe.pincode||''} onChange={e=>setFe(p=>({...p,pincode:e.target.value.replace(/\D/g,'')}))} />
               </div>
               <div>
-                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Diet Preference</div>
-                <select className="sel" value={fe.dietPreference||'Vegetarian'} onChange={e=>setFe(p=>({...p,dietPreference:e.target.value}))}>
-                  <option>Vegetarian</option><option>Eggetarian</option><option>Non-Vegetarian</option>
-                </select>
+                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>Diet Preference</div>
+                <div style={{display:'flex',gap:8}}>
+                  {[{v:'Vegetarian',e:'🌿'},{v:'Eggetarian',e:'🥚'},{v:'Non-Vegetarian',e:'🐟'}].map(d=>(
+                    <button key={d.v} onClick={()=>setFe(p=>({...p,dietPreference:d.v}))} type="button"
+                      style={{flex:1,padding:'10px 4px',borderRadius:10,border:`2px solid ${(fe.dietPreference||'Vegetarian')===d.v?'var(--green)':'var(--border)'}`,background:(fe.dietPreference||'Vegetarian')===d.v?'var(--green-pale)':'var(--white)',color:(fe.dietPreference||'Vegetarian')===d.v?'var(--green)':'var(--text-mid)',fontWeight:700,fontSize:11,cursor:'pointer',transition:'all 0.15s',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                      <span style={{fontSize:18}}>{d.e}</span>
+                      <span>{d.v==='Non-Vegetarian'?'Non-Veg':d.v}</span>
+                      {(fe.dietPreference||'Vegetarian')===d.v && <span style={{fontSize:12}}>✓</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
-                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Preferred Delivery Time</div>
-                <select className="sel" value={fe.deliveryPreference||'Morning'} onChange={e=>setFe(p=>({...p,deliveryPreference:e.target.value}))}>
-                  <option>Morning</option><option>Afternoon</option><option>Evening</option>
-                </select>
+                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>Preferred Delivery Time</div>
+                <div style={{display:'flex',gap:8}}>
+                  {[{v:'Morning',e:'🌅',t:'7–11 AM'},{v:'Afternoon',e:'☀️',t:'12–5 PM'},{v:'Evening',e:'🌙',t:'5–9 PM'}].map(s=>(
+                    <button key={s.v} onClick={()=>setFe(p=>({...p,deliveryPreference:s.v}))} type="button"
+                      style={{flex:1,padding:'10px 4px',borderRadius:10,border:`2px solid ${(fe.deliveryPreference||'Morning')===s.v?'var(--green)':'var(--border)'}`,background:(fe.deliveryPreference||'Morning')===s.v?'var(--green-pale)':'var(--white)',color:(fe.deliveryPreference||'Morning')===s.v?'var(--green)':'var(--text-mid)',fontWeight:700,fontSize:11,cursor:'pointer',transition:'all 0.15s',display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      <span style={{fontSize:18}}>{s.e}</span>
+                      <span>{s.v}</span>
+                      <span style={{fontSize:9,fontWeight:400,color:(fe.deliveryPreference||'Morning')===s.v?'var(--green)':'var(--text-light)'}}>{s.t}</span>
+                      {(fe.deliveryPreference||'Morning')===s.v && <span style={{fontSize:11}}>✓</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:14 }}>

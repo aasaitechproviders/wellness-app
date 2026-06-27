@@ -35,7 +35,7 @@ button { font-family:inherit; cursor:pointer; border:none; background:none; }
 input,textarea,select { font-family:inherit; }
 img { display:block; max-width:100%; }
 #root { min-height:100dvh; }
-.app-shell { max-width:430px; margin:0 auto; min-height:100dvh; position:relative; background:var(--cream); }
+.app-shell { max-width:430px; margin:0 auto; min-height:100dvh; position:relative; background:var(--cream); overflow-x:hidden; }
 
 /* ── Page layouts ─── */
 .page { display:flex; flex-direction:column; min-height:100dvh; background:var(--cream); }
@@ -185,7 +185,7 @@ img { display:block; max-width:100%; }
    ═══════════════════════════════════════════════════════════ */
 
 /* page-shell = page */
-.page-shell { display:flex; flex-direction:column; min-height:100dvh; background:var(--cream); }
+.page-shell { display:flex; flex-direction:column; min-height:100dvh; background:var(--cream); overflow-x:hidden; }
 
 /* page-shell-scroll = scroll */
 .page-shell-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -241,3 +241,44 @@ img { display:block; max-width:100%; }
 .member-card { background:var(--white); border:1.5px solid var(--border); border-radius:12px; padding:12px; }
 .stepper-btn { background:none; border:none; font-size:18px; cursor:pointer; padding:4px 10px; color:var(--text-mid); }
 .stepper-val { font-size:16px; font-weight:700; min-width:28px; text-align:center; }
+
+/* ── Slot button (Schedule page) ── */
+.slot-btn {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:16px 18px; border-radius:14px; margin-bottom:10px;
+  border:2px solid var(--border); background:var(--white);
+  font-size:15px; font-weight:600; color:var(--text-mid);
+  cursor:pointer; transition:all 0.15s;
+}
+.slot-btn.sel {
+  border-color:var(--green); background:var(--green-pale); color:var(--green);
+}
+
+/* ── Option button group (replaces selects) ── */
+.opt-btn {
+  flex:1; padding:12px 8px; border-radius:12px;
+  border:2px solid var(--border); background:var(--white);
+  font-weight:700; font-size:13px; color:var(--text-mid);
+  cursor:pointer; transition:all 0.15s; text-align:center;
+}
+.opt-btn.on {
+  border-color:var(--green); background:var(--green); color:#fff;
+}
+
+/* ── Plan tile improvements ── */
+.plan-radio { width:22px; height:22px; border-radius:50%; border:2px solid var(--border-mid); flex-shrink:0; position:relative; background:var(--white); transition:all 0.15s; }
+
+/* ── Input focus ring ── */
+.inp:focus, .ta:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(45,106,53,0.12); }
+
+/* ── Better card borders ── */
+.card { box-shadow:0 1px 3px rgba(0,0,0,0.05), 0 1px 8px rgba(0,0,0,0.04); }
+
+/* ── Chip tag pill ── */
+.ctag {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:50px;
+  background:var(--green-pale); color:var(--green);
+  font-size:12px; font-weight:600; border:1.5px solid #C8E6C9;
+}
+.ctag-red { background:#FFF0F0; color:var(--red); border-color:#FFCDD2; }

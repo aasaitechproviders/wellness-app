@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [family,  setFamily]  = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // On app start — restore session with FULL family data
+  // On app start — restore session with full family data via api.me()
   useEffect(() => {
     const token = localStorage.getItem('kp_token')
     if (token) {
@@ -26,14 +26,8 @@ export function AuthProvider({ children }) {
   const login = async (phone) => {
     const data = await api.login(phone)
     localStorage.setItem('kp_token', data.token)
-    // Login returns stripped family — immediately fetch full profile
-    try {
-      const full = await api.me()
-      setFamily(full.family)
-    } catch {
-      // fallback to stripped data if me() fails
-      setFamily(data.family)
-    }
+    // v2.0.0: login now returns full family document directly — no second round trip needed
+    setFamily(data.family)
     return data
   }
 

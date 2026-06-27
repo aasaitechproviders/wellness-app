@@ -280,9 +280,14 @@ export default function Home() {
               <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
                 <div className="field">
                   <label className="label">City</label>
-                  <select className="sel" value={addr.city} onChange={e=>setAddr(p=>({...p,city:e.target.value}))}>
-                    <option>Coimbatore</option><option>Chennai</option>
-                  </select>
+                  <div style={{display:'flex',gap:10}}>
+                    {['Coimbatore','Chennai'].map(c=>(
+                      <button key={c} onClick={()=>setAddr(p=>({...p,city:c}))} type="button"
+                        style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${addr.city===c?'var(--green)':'var(--border)'}`,background:addr.city===c?'var(--green)':'var(--white)',color:addr.city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s'}}>
+                        {addr.city===c?'✓ ':''}{c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
                   {[{id:'individual',emoji:'🏠',label:'Individual Home'},{id:'gated',emoji:'🏢',label:'Gated Community'}].map(o=>(

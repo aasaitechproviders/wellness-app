@@ -118,7 +118,8 @@ export default function Setup() {
     api.getFamily(family._id).then(d => {
       const f = d.family
       if (!f) return
-      setName(f.familyName || '')
+      const autoName = f.familyName && f.familyName.startsWith('Family-')
+      setName(autoName ? '' : (f.familyName || ''))
       setEmail(f.email || '')
       setCity(f.city || 'Coimbatore')
       setAptName(f.apartmentName || '')
@@ -334,9 +335,14 @@ export default function Setup() {
               <div style={{display:'flex',flexDirection:'column',gap:11}}>
                 <div className="field">
                   <label className="label">City</label>
-                  <select className="sel" value={city} onChange={e=>setCity(e.target.value)}>
-                    <option>Coimbatore</option><option>Chennai</option>
-                  </select>
+                  <div style={{display:'flex',gap:10}}>
+                    {['Coimbatore','Chennai'].map(c=>(
+                      <button key={c} onClick={()=>setCity(c)} type="button"
+                        style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${city===c?'var(--green)':'var(--border)'}`,background:city===c?'var(--green)':'var(--white)',color:city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                        {city===c && <span style={{fontSize:14}}>✓</span>} {c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="field">
                   <label className="label">Delivery Location Type</label>
