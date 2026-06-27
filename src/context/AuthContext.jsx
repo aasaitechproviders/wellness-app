@@ -4,15 +4,19 @@ import { api } from '../api'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [family, setFamily] = useState(null)
+  const [family,  setFamily]  = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // On app start — restore session with FULL family data
   useEffect(() => {
     const token = localStorage.getItem('kp_token')
     if (token) {
       api.me()
         .then(d => setFamily(d.family))
-        .catch(() => localStorage.removeItem('kp_token'))
+        .catch(() => {
+          localStorage.removeItem('kp_token')
+          setFamily(null)
+        })
         .finally(() => setLoading(false))
     } else {
       setLoading(false)
@@ -22,14 +26,25 @@ export function AuthProvider({ children }) {
   const login = async (phone) => {
     const data = await api.login(phone)
     localStorage.setItem('kp_token', data.token)
-    setFamily(data.family)
+    // Login returns stripped family — immediately fetch full profile
+    try {
+      const full = await api.me()
+      setFamily(full.family)
+    } catch {
+      // fallback to stripped data if me() fails
+      setFamily(data.family)
+    }
     return data
   }
 
-  const updateFamily = (updated) => setFamily(updated)
+  const updateFamily = (updated) => {
+    if (updated) setFamily(updated)
+  }
 
   const logout = () => {
     localStorage.removeItem('kp_token')
+    localStorage.removeItem('kp_cart')
+    localStorage.removeItem('kp_phone')
     setFamily(null)
   }
 

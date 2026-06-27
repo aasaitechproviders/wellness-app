@@ -116,19 +116,18 @@ export default function Profile() {
     if (!fe.familyName?.trim()) return showToast('Family name is required','error')
     setSaving(true)
     try {
-      const addressStr = [fe.apartmentName, fe.towerNo&&`Tower ${fe.towerNo}`, fe.flatNo&&`Flat ${fe.flatNo}`, fe.landmark, fe.pincode].filter(Boolean).join(', ')
       const r = await api.updateFamily(f._id, {
-        familyName:         fe.familyName,
-        email:              fe.email,
-        city:               fe.city,
-        address:            addressStr || fe.address || '',
-        apartmentName:      fe.apartmentName,
-        towerNo:            fe.towerNo,
-        flatNo:             fe.flatNo,
-        landmark:           fe.landmark,
-        pincode:            fe.pincode,
-        dietPreference:     fe.dietPreference,
-        deliveryPreference: fe.deliveryPreference,
+        familyName:          fe.familyName,
+        email:               fe.email,
+        city:                fe.city,
+        address:             [fe.apartmentName, fe.flatNo&&`Flat ${fe.flatNo}`, fe.towerNo&&`Tower ${fe.towerNo}`].filter(Boolean).join(', ') || fe.apartmentName || '',
+        apartmentName:       fe.apartmentName,
+        flatNo:              fe.flatNo,
+        towerNo:             fe.towerNo,
+        landmark:            fe.landmark,
+        pincode:             fe.pincode,
+        dietPreference:      fe.dietPreference,
+        deliveryPreference:  fe.deliveryPreference,
       })
       const fresh = r.family || f
       setF(fresh); updateFamily(fresh)

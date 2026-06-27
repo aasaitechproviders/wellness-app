@@ -52,8 +52,15 @@ export default function Home() {
   const saveAddr = async () => {
     setAddrSaving(true)
     try {
-      const addrStr = [addr.aptName, addr.tower && 'Tower '+addr.tower, addr.flat && 'Flat '+addr.flat, addr.landmark, addr.pincode].filter(Boolean).join(', ')
-      const r = await api.updateFamily(family._id,{ city:addr.city, address:addrStr||addr.aptName||'', apartmentName:addr.aptName, towerNo:addr.tower, flatNo:addr.flat, landmark:addr.landmark, pincode:addr.pincode })
+      const r = await api.updateFamily(family._id, {
+        city:         addr.city,
+        address:      [addr.aptName, addr.flat && `Flat ${addr.flat}`, addr.tower && `Tower ${addr.tower}`].filter(Boolean).join(', ') || addr.aptName || '',
+        apartmentName: addr.aptName,
+        flatNo:       addr.flat,
+        towerNo:      addr.tower,
+        landmark:     addr.landmark,
+        pincode:      addr.pincode,
+      })
       updateFamily(r.family||f); setFreshFamily(r.family||f)
       showToast('Address updated ✓','success'); setAddrSheet(false)
     } catch(e){ showToast(e.message,'error') } finally { setAddrSaving(false) }
