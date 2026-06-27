@@ -5,7 +5,7 @@ import { api } from '../api'
 import { showToast } from '../components/Toast'
 import logo from '../assets/logo.png'
 
-/* ─── constants ─── */
+/* ─── Static UI constants (not domain data) ─── */
 const RELS = [
   {id:'Self',emoji:'👤'},{id:'Spouse',emoji:'👫'},{id:'Child',emoji:'👶'},
   {id:'Parent',emoji:'👨'},{id:'Grandparent',emoji:'👴'},{id:'Other',emoji:'👥'},
@@ -16,31 +16,38 @@ const ACTIVITY = [
   {id:'moderate', label:'Moderately Active',sub:'Exercise\n3–5 days/week',         emoji:'🏃'},
   {id:'high',     label:'Highly Active',   sub:'Intense exercise\nmost days',       emoji:'🏋️'},
 ]
-const GOALS_LIST = [
-  {name:'Immunity Support',  emoji:'🛡️',desc:'Strengthen immunity naturally'},
-  {name:'Protein Support',   emoji:'💪',desc:'Build & repair muscles'},
-  {name:'Iron Support',      emoji:'💧',desc:'Improve hemoglobin levels'},
-  {name:'Weight Management', emoji:'⚖️',desc:'Healthy weight control'},
-  {name:'Diabetes Friendly', emoji:'🩺',desc:'Balanced sugar management'},
-  {name:'Heart Wellness',    emoji:'❤️',desc:'Support heart health'},
-  {name:'Digestive Wellness',emoji:'🌀',desc:'Better digestion & gut health'},
-  {name:'Bone Health',       emoji:'🦴',desc:'Stronger bones & joints'},
-  {name:"Women's Wellness",  emoji:'🌸',desc:'Hormonal & overall well-being'},
-  {name:'Kids Nutrition',    emoji:'😊',desc:'Support growth & development'},
-  {name:'Senior Wellness',   emoji:'👴',desc:'Healthy ageing & vitality'},
-  {name:'Other Goal',        emoji:'···',desc:'Something else in mind?'},
-]
-const TASTE   = ['Sweet','Mild','Tangy','Spicy','Bitter']
-const COOKING = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
-const ALLERGY = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance','None']
 const STEP_LABELS = [['1','Personal &\nDelivery'],['2','Family\nMembers'],['3','Wellness\nGoals'],['4','Food\nPreferences']]
-const HC_LIST = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues']
+
+/* ─── Goal emoji map (icon enrichment for DB goals) ─── */
+const GOAL_EMOJI = {
+  'Immunity Support':'🛡️','Protein Support':'💪','Iron Support':'💧',
+  'Weight Management':'⚖️','Diabetes Friendly':'🩺','Diabetes Control':'🩺',
+  'Heart Wellness':'❤️','Digestive Wellness':'🌀','Bone Health':'🦴',
+  "Women's Wellness":'🌸','Kids Nutrition':'😊','Senior Wellness':'👴',
+  'Detox':'✨','General Wellness':'🌿','Other Goal':'···',
+}
+
+const DELIVERY_TYPES = [
+  {id:'individual',emoji:'🏠',title:'Individual Home',      sub:'Deliver to your home or apartment'},
+  {id:'gated',     emoji:'🏢',title:'Gated Community / Wellness Partner',sub:'Deliver to your community or partner'},
+]
+const DIET_TYPES = [
+  {id:'Vegetarian',    emoji:'🌿',desc:'No meat, poultry or fish'},
+  {id:'Eggetarian',    emoji:'🥚',desc:'Includes eggs'},
+  {id:'Non-Vegetarian',emoji:'🐟',desc:'Includes meat, poultry & fish'},
+]
+const DELIVERY_SLOTS = [
+  {id:'morning',  emoji:'🌅',label:'Morning',  time:'7 AM – 11 AM'},
+  {id:'afternoon',emoji:'☀️',label:'Afternoon',time:'12 PM – 5 PM'},
+  {id:'evening',  emoji:'🌙',label:'Evening',  time:'5 PM – 9 PM'},
+]
 
 const calcBMI = (h,w) => { const hm=parseFloat(h)/100; if(!hm||!w) return null; return (parseFloat(w)/(hm*hm)).toFixed(1) }
 const bmiInfo = b => { if(!b) return null; const v=parseFloat(b); if(v<18.5) return{label:'Underweight',color:'#E67E22'}; if(v<25) return{label:'Normal',color:'#27AE60'}; if(v<30) return{label:'Overweight',color:'#E67E22'}; return{label:'Obese',color:'#E53935'} }
 const initials = (n='') => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()
 const ACOLORS = ['#2D6A35','#1565C0','#AD1457','#E65100','#6A1B9A']
 const acolor = i => ACOLORS[i%ACOLORS.length]
+const ageOf = dob => dob ? Math.floor((Date.now()-new Date(dob))/31557600000) : null
 
 function Stepper({ step }) {
   return (
@@ -57,14 +64,8 @@ function Stepper({ step }) {
     </div>
   )
 }
-
 function SecH({ emoji, title }) {
-  return (
-    <div className="sec-hd">
-      <span className="sec-hd-icon">{emoji}</span>
-      <span className="sec-hd-title">{title}</span>
-    </div>
-  )
+  return <div className="sec-hd"><span className="sec-hd-icon">{emoji}</span><span className="sec-hd-title">{title}</span></div>
 }
 
 export default function Setup() {
@@ -73,11 +74,22 @@ export default function Setup() {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  /* ── Step 0 state ── */
+  /* ── DB-loaded data ── */
+  const [cities,     setCities]     = useState([])        // from /delivery/cities
+  const [apartments, setApartments] = useState([])        // from /delivery/apartments?city=
+  const [aptLoading, setAptLoading] = useState(false)
+  const [apiGoals,   setApiGoals]   = useState([])        // from /wellness/goals
+  const [apiHC,      setApiHC]      = useState([])        // from /delivery/health-challenges
+  const [apiTaste,   setApiTaste]   = useState([])        // from DB or fallback
+  const [apiCooking, setApiCooking] = useState([])
+  const [apiAllergy, setApiAllergy] = useState([])
+
+  /* ── Step 0 ── */
   const [name,     setName]     = useState('')
   const [email,    setEmail]    = useState('')
-  const [city,     setCity]     = useState('Coimbatore')
+  const [city,     setCity]     = useState('')
   const [dlvType,  setDlvType]  = useState('individual')
+  const [aptId,    setAptId]    = useState('')            // selected apartment _id from DB
   const [aptName,  setAptName]  = useState('')
   const [tower,    setTower]    = useState('')
   const [flat,     setFlat]     = useState('')
@@ -89,19 +101,18 @@ export default function Setup() {
   const [ecRel,    setEcRel]    = useState('')
   const [ecPhone,  setEcPhone]  = useState('')
 
-  /* ── Step 1 state ── */
+  /* ── Step 1 ── */
   const [members,  setMembers]  = useState([])
   const [newM,     setNewM]     = useState({rel:'Self',name:'',dob:'',gender:'Female',height:'',weight:'',activity:'moderate',include:true})
   const [editIdx,  setEditIdx]  = useState(null)
 
-  /* ── Step 2 state ── */
+  /* ── Step 2 ── */
   const [activeMem, setActiveMem] = useState(0)
   const [mGoals,    setMGoals]    = useState({})
   const [mHC,       setMHC]       = useState({})
   const [hcQ,       setHcQ]       = useState('')
-  const [apiGoals,  setApiGoals]  = useState([])
 
-  /* ── Step 3 state ── */
+  /* ── Step 3 ── */
   const [diet,    setDiet]    = useState('Vegetarian')
   const [vegRestr,setVegRestr]= useState(false)
   const [vegQ,    setVegQ]    = useState('')
@@ -111,9 +122,22 @@ export default function Setup() {
   const [allergy, setAllergy] = useState(['None'])
   const [prefPlan,setPrefPlan]= useState('weekly')
 
-  // ── Load full family data on mount to pre-fill all fields ──
+  /* ── Load all DB data on mount ── */
   useEffect(() => {
+    // Load cities from DB
+    api.getCities().then(d => {
+      const list = d.cities || []
+      setCities(list)
+      if (list.length && !city) setCity(list[0])
+    }).catch(() => { setCities(['Coimbatore','Chennai']); setCity('Coimbatore') })
+
+    // Load wellness goals from DB
     api.getGoals().then(d => setApiGoals(d.goals||[])).catch(()=>{})
+
+    // Load health challenges from DB
+    api.getHealthChallenges().then(d => setApiHC(d.challenges||[])).catch(()=>{})
+
+    // Load family data and pre-fill all fields
     if (!family?._id) return
     api.getFamily(family._id).then(d => {
       const f = d.family
@@ -121,7 +145,10 @@ export default function Setup() {
       const autoName = f.familyName && f.familyName.startsWith('Family-')
       setName(autoName ? '' : (f.familyName || ''))
       setEmail(f.email || '')
-      setCity(f.city || 'Coimbatore')
+      const savedCity = f.city || ''
+      if (savedCity) setCity(savedCity)
+      setDlvType(f.deliveryType || 'individual')
+      setAptId(f.apartmentId || '')
       setAptName(f.apartmentName || '')
       setTower(f.towerNo || '')
       setFlat(f.flatNo || '')
@@ -130,16 +157,40 @@ export default function Setup() {
       setPrefTime(f.preferredDeliveryTime || 'morning')
       setDlvInstr(f.deliveryInstructions || '')
       if (f.dietPreference) setDiet(f.dietPreference)
+      // Load apartments for saved city
+      if (savedCity) loadApartments(savedCity)
     }).catch(() => {
       if (family.familyName) setName(family.familyName)
-      if (family.city) setCity(family.city)
+      if (family.city) { setCity(family.city); loadApartments(family.city) }
     })
   }, [family?._id])
+
+  // Load apartments when city changes
+  const loadApartments = (c) => {
+    if (!c) return
+    setAptLoading(true)
+    api.getApartments(c).then(d => {
+      setApartments(d.apartments || [])
+    }).catch(() => setApartments([]))
+      .finally(() => setAptLoading(false))
+  }
+
+  const handleCityChange = (c) => {
+    setCity(c)
+    setAptId('')
+    setAptName('')
+    loadApartments(c)
+  }
+
+  const handleAptSelect = (apt) => {
+    setAptId(apt._id || apt.apartmentId || '')
+    setAptName(apt.apartmentName || apt.name || '')
+  }
 
   /* helpers */
   const curMem   = members[activeMem]
   const curGoals = curMem ? (mGoals[curMem._tid]||[]) : []
-  const ageOf    = dob => dob ? Math.floor((Date.now()-new Date(dob))/31557600000) : null
+  const curHC    = curMem ? (mHC[curMem._tid]||[]) : []
 
   const toggleGoal = (tid,gn) => setMGoals(p => {
     const c=p[tid]||[]
@@ -149,7 +200,10 @@ export default function Setup() {
   const toggleHC    = (tid,h) => setMHC(p=>{const c=p[tid]||[];return{...p,[tid]:c.includes(h)?c.filter(x=>x!==h):[...c,h]}})
   const toggleTaste = t => setTaste(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
   const toggleCook  = c => setCook(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c])
-  const toggleAllergy = a => { if(a==='None'){setAllergy(['None']);return}; setAllergy(p=>{const f=p.filter(x=>x!=='None');return f.includes(a)?f.filter(x=>x!==a):[...f,a]}) }
+  const toggleAllergy = a => {
+    if(a==='None'){setAllergy(['None']);return}
+    setAllergy(p=>{const f=p.filter(x=>x!=='None');return f.includes(a)?f.filter(x=>x!==a):[...f,a]})
+  }
 
   const saveMember = () => {
     if(!newM.name.trim()) return showToast('Name is required','error')
@@ -164,6 +218,7 @@ export default function Setup() {
   const proceed = async () => {
     if (step===0) {
       if(!name.trim()) return showToast('Full name is required','error')
+      if(!city) return showToast('Please select a city','error')
       setStep(1)
     } else if (step===1) {
       if(members.length===0) return showToast('Add at least one family member','error')
@@ -175,83 +230,73 @@ export default function Setup() {
       setBusy(true)
       try {
         const phone = localStorage.getItem('kp_phone')||family?.phone||''
-        let fam = family
+        const addressStr = [aptName, flat&&`Flat ${flat}`, tower&&`Tower ${tower}`, landmark].filter(Boolean).join(', ') || aptName || ''
+        const payload = {
+          familyName:  name, phone, email, city,
+          address:     addressStr,
+          apartmentId: aptId || null,
+          apartmentName: aptName,
+          flatNo:      flat,
+          towerNo:     tower || null,
+          landmark,    pincode,
+          deliveryType: dlvType,
+          preferredDeliveryTime: prefTime,
+          deliveryInstructions:  dlvInstr,
+          dietPreference: diet,
+        }
 
+        let fam = family
         if (!fam?._id) {
-          const r = await api.registerFamily({
-            familyName:  name,
-            phone,
-            email,
-            city,
-            address:     [aptName, flat&&`Flat ${flat}`, tower&&`Tower ${tower}`].filter(Boolean).join(', ') || aptName || 'Home',
-            apartmentName: aptName || 'Home',
-            flatNo:      flat || '0',
-            towerNo:     tower || null,
-            landmark,
-            pincode,
-            preferredDeliveryTime: prefTime,
-            deliveryInstructions:  dlvInstr,
-            dietPreference: diet,
-          })
+          const r = await api.registerFamily(payload)
           fam = r.family; updateFamily(fam)
         } else {
-          const r = await api.updateFamily(fam._id, {
-            familyName:   name,
-            email,
-            city,
-            address:     [aptName, flat&&`Flat ${flat}`, tower&&`Tower ${tower}`].filter(Boolean).join(', ') || aptName || '',
-            apartmentName: aptName,
-            flatNo:      flat,
-            towerNo:     tower,
-            landmark,
-            pincode,
-            preferredDeliveryTime: prefTime,
-            deliveryInstructions:  dlvInstr,
-            dietPreference: diet,
-          })
+          const r = await api.updateFamily(fam._id, payload)
           fam = r.family||fam; updateFamily(fam)
         }
 
-        // Add each member with goals
         for (const m of members) {
           try {
             await api.addMember(fam._id, {
-              name:             m.name,
-              gender:           m.gender,
-              age:              ageOf(m.dob),
-              height:           parseFloat(m.height)||null,
-              weight:           parseFloat(m.weight)||null,
-              activityLevel:    m.activity,
-              relationship:     m.rel,
-              wellnessGoals:    mGoals[m._tid]||[],
-              healthChallenges: mHC[m._tid]||[],
-              tastePref:        taste,
-              cookPref:         cook,
-              dietType:         diet,
+              name: m.name, gender: m.gender, age: ageOf(m.dob),
+              height: parseFloat(m.height)||null, weight: parseFloat(m.weight)||null,
+              activityLevel: m.activity, relationship: m.rel,
+              wellnessGoals: mGoals[m._tid]||[], healthChallenges: mHC[m._tid]||[],
+              tastePref: taste, cookPref: cook, dietType: diet,
               dietaryRestrictions: allergy.filter(a=>a!=='None'),
             })
-          } catch(addErr){ console.warn('Member add error:',addErr) }
+          } catch(e){ console.warn('Member add error:',e) }
         }
 
-        // Re-fetch full family so AuthContext is fresh
         try { const fresh=await api.getFamily(fam._id); updateFamily(fresh.family||fam) } catch{}
-
         showToast('Profile saved! 🎉','success')
         nav('/home',{replace:true})
       } catch(e) {
         showToast(e.message||'Save failed','error')
-      } finally {
-        setBusy(false)
-      }
+      } finally { setBusy(false) }
     }
   }
 
   const bmi = calcBMI(newM.height,newM.weight)
   const bi  = bmiInfo(bmi)
+
+  // Build goals list from DB, enrich with emojis
   const goalsList = apiGoals.length
-    ? apiGoals.map(g=>{const m=GOALS_LIST.find(x=>x.name===(g.goalName||g.name));return{name:g.goalName||g.name,emoji:m?.emoji||'🌿',desc:g.description||m?.desc||''}})
-    : GOALS_LIST
-  const hcFiltered = HC_LIST.filter(x=>x.toLowerCase().includes(hcQ.toLowerCase()))
+    ? apiGoals.map(g => ({
+        name: g.goalName||g.name,
+        emoji: GOAL_EMOJI[g.goalName||g.name] || '🌿',
+        desc:  g.description || '',
+      }))
+    : Object.keys(GOAL_EMOJI).map(name=>({name,emoji:GOAL_EMOJI[name],desc:''}))
+
+  // HC list from DB
+  const hcList = apiHC.length ? apiHC : ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues']
+  const hcFiltered = hcList.filter(h => (typeof h==='string'?h:h.name||'').toLowerCase().includes(hcQ.toLowerCase()))
+  const hcName = h => typeof h==='string' ? h : h.name||''
+
+  // Taste/cooking/allergy - these could come from DB in future, hardcode for now as they're UI patterns
+  const TASTE   = ['Sweet','Mild','Tangy','Spicy','Bitter']
+  const COOKING = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
+  const ALLERGY = ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance','None']
 
   return (
     <div className="page">
@@ -274,12 +319,8 @@ export default function Setup() {
             </div>
           )}
         </div>
-
-        {/* Page title */}
         <div style={{padding:'8px 18px 0',position:'relative',minHeight:step<2?80:0}}>
-          {step<2&&(
-            <div style={{position:'absolute',top:0,right:0,fontSize:80,opacity:0.7,lineHeight:1,filter:'drop-shadow(2px 3px 6px rgba(0,0,0,0.1))'}}>🧺</div>
-          )}
+          {step<2&&<div style={{position:'absolute',top:0,right:0,fontSize:80,opacity:0.7,lineHeight:1,filter:'drop-shadow(2px 3px 6px rgba(0,0,0,0.1))'}}>🧺</div>}
           <div style={{fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--green)',marginBottom:2}}>STEP {step+1} OF 4</div>
           <div style={{fontFamily:'var(--font-serif)',fontSize:22,fontWeight:700,lineHeight:1.25,marginBottom:3,position:'relative',zIndex:1,maxWidth:step<2?'65%':'100%'}}>
             {['Personal & Delivery Details','Family Members','Wellness Goals','Food Preferences'][step]}
@@ -290,24 +331,17 @@ export default function Setup() {
               curMem?`Choose up to 3 wellness goals for ${curMem.name.split(' ')[0]}`:'Choose wellness goals',
               "Help us curate baskets you'll love, every time."][step]}
           </div>
-          {step===2&&(
-            <div style={{position:'absolute',top:8,right:18,background:'var(--green)',color:'#fff',borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:700}}>
-              ✓ {curGoals.length} selected
-            </div>
-          )}
+          {step===2&&<div style={{position:'absolute',top:8,right:18,background:'var(--green)',color:'#fff',borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:700}}>✓ {curGoals.length} selected</div>}
         </div>
       </div>
 
       <Stepper step={step}/>
 
-      {/* ── Scrollable content ── */}
       <div className="scroll" style={{padding:'14px 18px 120px'}}>
 
-        {/* ══ STEP 0: Personal & Delivery ══ */}
+        {/* ══ STEP 0 ══ */}
         {step===0&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-
-            {/* Personal Information */}
             <div className="card">
               <SecH emoji="👤" title="Personal Information"/>
               <div style={{display:'flex',flexDirection:'column',gap:11}}>
@@ -329,25 +363,28 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Delivery Address */}
             <div className="card">
               <SecH emoji="📍" title="Delivery Address"/>
-              <div style={{display:'flex',flexDirection:'column',gap:11}}>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+
+                {/* City — from DB */}
                 <div className="field">
                   <label className="label">City</label>
-                  <div style={{display:'flex',gap:10}}>
-                    {['Coimbatore','Chennai'].map(c=>(
-                      <button key={c} onClick={()=>setCity(c)} type="button"
-                        style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${city===c?'var(--green)':'var(--border)'}`,background:city===c?'var(--green)':'var(--white)',color:city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                        {city===c && <span style={{fontSize:14}}>✓</span>} {c}
+                  <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                    {cities.map(c=>(
+                      <button key={c} onClick={()=>handleCityChange(c)} type="button"
+                        style={{flex:1,minWidth:120,padding:'13px',borderRadius:12,border:`2px solid ${city===c?'var(--green)':'var(--border)'}`,background:city===c?'var(--green)':'var(--white)',color:city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                        {city===c&&<span>✓</span>} {c}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {/* Delivery type */}
                 <div className="field">
                   <label className="label">Delivery Location Type</label>
                   <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                    {[{id:'individual',emoji:'🏠',title:'Individual Home',sub:'Deliver to your home or apartment'},{id:'gated',emoji:'🏢',title:'Gated Community / Wellness Partner',sub:'Deliver to your community or partner'}].map(o=>(
+                    {DELIVERY_TYPES.map(o=>(
                       <div key={o.id} className={`sel-card${dlvType===o.id?' on':''}`} onClick={()=>setDlvType(o.id)}>
                         <span style={{fontSize:22}}>{o.emoji}</span>
                         <div style={{flex:1}}>
@@ -359,11 +396,47 @@ export default function Setup() {
                     ))}
                   </div>
                 </div>
-                <div className="field">
-                  <label className="label">Apartment / Building Name</label>
-                  <div className="input-row"><span className="input-ico">🏢</span>
-                    <input className="inp" placeholder="e.g. Green Meadows Apartments" value={aptName} onChange={e=>setAptName(e.target.value)}/></div>
-                </div>
+
+                {/* Apartment — from DB when gated, free text for individual */}
+                {dlvType==='gated' ? (
+                  <div className="field">
+                    <label className="label">Select Apartment / Community</label>
+                    {aptLoading ? (
+                      <div style={{padding:'12px',textAlign:'center',color:'var(--text-light)',fontSize:13}}>Loading apartments…</div>
+                    ) : apartments.length > 0 ? (
+                      <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:200,overflowY:'auto'}}>
+                        {apartments.map(apt=>{
+                          const aid = apt._id?.toString()||apt.apartmentId
+                          const aname = apt.apartmentName||apt.name
+                          const sel = aptId===aid || aptName===aname
+                          return (
+                            <div key={aid} onClick={()=>handleAptSelect(apt)}
+                              style={{padding:'12px 14px',borderRadius:12,border:`2px solid ${sel?'var(--green)':'var(--border)'}`,background:sel?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:10}}>
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:13,fontWeight:700,color:sel?'var(--green)':'var(--text)'}}>{aname}</div>
+                                {apt.city&&<div style={{fontSize:11,color:'var(--text-light)',marginTop:1}}>{apt.city}</div>}
+                              </div>
+                              {sel&&<span style={{color:'var(--green)',fontSize:18,fontWeight:700}}>✓</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{fontSize:12,color:'var(--text-light)',marginBottom:8}}>No registered apartments for {city||'this city'}. Enter manually:</div>
+                        <div className="input-row"><span className="input-ico">🏢</span>
+                          <input className="inp" placeholder="e.g. Green Meadows Apartments" value={aptName} onChange={e=>setAptName(e.target.value)}/></div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label className="label">Apartment / Building Name</label>
+                    <div className="input-row"><span className="input-ico">🏢</span>
+                      <input className="inp" placeholder="e.g. Green Meadows Apartments" value={aptName} onChange={e=>setAptName(e.target.value)}/></div>
+                  </div>
+                )}
+
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                   <div className="field">
                     <label className="label">Tower / Block</label>
@@ -379,7 +452,7 @@ export default function Setup() {
                 <div className="field">
                   <label className="label">Landmark <span className="opt">(Optional)</span></label>
                   <div className="input-row"><span className="input-ico">📌</span>
-                    <input className="inp" placeholder="e.g. Near Lotus Cafe, Anna Nagar" value={landmark} onChange={e=>setLandmark(e.target.value)}/></div>
+                    <input className="inp" placeholder="e.g. Near Lotus Cafe" value={landmark} onChange={e=>setLandmark(e.target.value)}/></div>
                 </div>
                 <div className="field">
                   <label className="label">Pincode</label>
@@ -389,12 +462,11 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Delivery Preference */}
             <div className="card">
               <SecH emoji="📅" title="Delivery Preference"/>
               <div style={{fontSize:12,fontWeight:600,color:'var(--text-mid)',marginBottom:10}}>Preferred Delivery Time</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
-                {[{id:'morning',emoji:'🌅',label:'Morning',time:'7 AM – 11 AM'},{id:'afternoon',emoji:'☀️',label:'Afternoon',time:'12 PM – 5 PM'},{id:'evening',emoji:'🌙',label:'Evening',time:'5 PM – 9 PM'}].map(s=>(
+                {DELIVERY_SLOTS.map(s=>(
                   <div key={s.id} onClick={()=>setPrefTime(s.id)}
                     style={{border:`1.5px solid ${prefTime===s.id?'var(--green)':'var(--border)'}`,borderRadius:12,padding:'12px 6px',textAlign:'center',cursor:'pointer',background:prefTime===s.id?'var(--green-pale)':'var(--white)',transition:'all 0.15s'}}>
                     <div style={{fontSize:24,marginBottom:4}}>{s.emoji}</div>
@@ -413,47 +485,35 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Emergency Contact */}
             <div className="card">
               <SecH emoji="🛡️" title="Emergency Contact"/>
               <div style={{fontSize:12,color:'var(--text-light)',marginBottom:12}}><span style={{fontWeight:500}}>(Optional)</span> — In case we are unable to reach you.</div>
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                <div className="field">
-                  <label className="label">Contact Person Name</label>
-                  <div className="input-row"><span className="input-ico">👤</span>
-                    <input className="inp" placeholder="e.g. Aravind Krishnan" value={ecName} onChange={e=>setEcName(e.target.value)}/></div>
-                </div>
-                <div className="field">
-                  <label className="label">Relationship</label>
-                  <div className="input-row"><span className="input-ico">👥</span>
-                    <input className="inp" placeholder="e.g. Husband" value={ecRel} onChange={e=>setEcRel(e.target.value)}/></div>
-                </div>
-                <div className="field">
-                  <label className="label">Mobile Number</label>
-                  <div className="input-row"><span className="input-ico">📞</span>
-                    <input className="inp" placeholder="+91 98765 43211" value={ecPhone} onChange={e=>setEcPhone(e.target.value)}/></div>
-                </div>
+                <div className="field"><label className="label">Contact Person Name</label>
+                  <div className="input-row"><span className="input-ico">👤</span><input className="inp" placeholder="e.g. Aravind Krishnan" value={ecName} onChange={e=>setEcName(e.target.value)}/></div></div>
+                <div className="field"><label className="label">Relationship</label>
+                  <div className="input-row"><span className="input-ico">👥</span><input className="inp" placeholder="e.g. Husband" value={ecRel} onChange={e=>setEcRel(e.target.value)}/></div></div>
+                <div className="field"><label className="label">Mobile Number</label>
+                  <div className="input-row"><span className="input-ico">📞</span><input className="inp" placeholder="+91 98765 43211" value={ecPhone} onChange={e=>setEcPhone(e.target.value)}/></div></div>
               </div>
               <div style={{display:'flex',alignItems:'flex-start',gap:10,background:'var(--green-light)',border:'1px solid #C8E6C9',borderRadius:10,padding:'10px 12px',marginTop:14}}>
                 <span style={{fontSize:16,flexShrink:0}}>🔒</span>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:'var(--green)',marginBottom:2}}>We value your privacy</div>
-                  <div style={{fontSize:11,color:'var(--text-mid)',lineHeight:1.5}}>Your information is used only for deliveries and personalized wellness recommendations. <span style={{color:'var(--green)',textDecoration:'underline',cursor:'pointer'}}>Learn more</span></div>
+                  <div style={{fontSize:11,color:'var(--text-mid)',lineHeight:1.5}}>Your information is used only for deliveries and personalized wellness recommendations.</div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ══ STEP 1: Family Members ══ */}
+        {/* ══ STEP 1 ══ */}
         {step===1&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {/* Existing members */}
             {members.length>0&&(
-              <div style={{background:'var(--white)',borderRadius:16,border:'1px solid var(--border)',padding:'14px',marginBottom:4}}>
+              <div style={{background:'var(--white)',borderRadius:16,border:'1px solid var(--border)',padding:'14px'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
                   <div style={{fontSize:14,fontWeight:700}}>Your Family ({members.length})</div>
-                  <span style={{fontSize:12,fontWeight:600,color:'var(--green)',cursor:'pointer'}}>View / Edit All ›</span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                   {members.map((m,i)=>{
@@ -470,8 +530,7 @@ export default function Setup() {
                         </div>
                         {hasG
                           ? <div style={{fontSize:11,color:'var(--green)',fontWeight:600}}>✅ Profile complete</div>
-                          : <div style={{fontSize:11,color:'#E67E22',fontWeight:600}}>⏳ Wellness details pending</div>
-                        }
+                          : <div style={{fontSize:11,color:'#E67E22',fontWeight:600}}>⏳ Wellness details pending</div>}
                       </div>
                     )
                   })}
@@ -479,7 +538,6 @@ export default function Setup() {
               </div>
             )}
 
-            {/* Add/Edit member form */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -489,7 +547,6 @@ export default function Setup() {
                 <span style={{fontSize:11,fontWeight:700,background:'#FFF0F0',color:'var(--red)',padding:'3px 8px',borderRadius:6}}>* Required</span>
               </div>
 
-              {/* Relationship */}
               <div className="field" style={{marginBottom:14}}>
                 <label className="label">Relationship <span style={{color:'var(--red)'}}>*</span></label>
                 <div style={{display:'flex',gap:6,marginTop:4,overflowX:'auto',paddingBottom:2}}>
@@ -503,14 +560,12 @@ export default function Setup() {
                 </div>
               </div>
 
-              {/* Name */}
               <div className="field" style={{marginBottom:12}}>
                 <label className="label">Full Name <span style={{color:'var(--red)'}}>*</span></label>
                 <div className="input-row"><span className="input-ico">👤</span>
                   <input className="inp" placeholder="e.g. Priya Krishnan" value={newM.name} onChange={e=>setNewM(p=>({...p,name:e.target.value}))}/></div>
               </div>
 
-              {/* DOB + Gender */}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
                 <div className="field">
                   <label className="label">Date of Birth <span style={{color:'var(--red)'}}>*</span></label>
@@ -531,7 +586,6 @@ export default function Setup() {
                 </div>
               </div>
 
-              {/* Height + Weight */}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:4}}>
                 <div className="field">
                   <label className="label">Height (cm) <span className="opt">Optional</span></label>
@@ -546,13 +600,8 @@ export default function Setup() {
                   <div style={{fontSize:10,color:'var(--text-light)'}}>Used only for better recommendations.</div>
                 </div>
               </div>
-              {bmi&&bi&&(
-                <div style={{fontSize:12,fontWeight:600,color:bi.color,marginBottom:10,padding:'5px 10px',background:bi.color+'15',borderRadius:8}}>
-                  BMI {bmi} · {bi.label}
-                </div>
-              )}
+              {bmi&&bi&&<div style={{fontSize:12,fontWeight:600,color:bi.color,marginBottom:10,padding:'5px 10px',background:bi.color+'15',borderRadius:8}}>BMI {bmi} · {bi.label}</div>}
 
-              {/* Activity Level */}
               <div className="field" style={{marginBottom:14}}>
                 <label className="label" style={{marginBottom:8}}>Activity Level <span style={{color:'var(--red)'}}>*</span></label>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7}}>
@@ -567,7 +616,6 @@ export default function Setup() {
                 </div>
               </div>
 
-              {/* Include checkbox */}
               <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:16,fontSize:13,color:'var(--text-mid)'}} onClick={()=>setNewM(p=>({...p,include:!p.include}))}>
                 <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${newM.include?'var(--green)':'var(--border)'}`,background:newM.include?'var(--green)':'var(--white)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s'}}>
                   {newM.include&&<span style={{color:'#fff',fontSize:11,fontWeight:700}}>✓</span>}
@@ -576,7 +624,6 @@ export default function Setup() {
                 <span style={{marginLeft:'auto',color:'var(--text-light)',fontSize:15}}>ℹ️</span>
               </label>
 
-              {/* Buttons */}
               <div style={{display:'grid',gridTemplateColumns:editIdx!==null?'1fr 2fr':'1fr',gap:10}}>
                 {editIdx!==null&&(
                   <button className="btn btn-outline" onClick={()=>{setEditIdx(null);setNewM({rel:'Self',name:'',dob:'',gender:'Female',height:'',weight:'',activity:'moderate',include:true})}}>Cancel</button>
@@ -587,9 +634,10 @@ export default function Setup() {
           </div>
         )}
 
-        {/* ══ STEP 2: Wellness Goals ══ */}
+        {/* ══ STEP 2 ══ */}
         {step===2&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {/* Goals from DB */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
               {goalsList.map(g=>{
                 const on=curMem&&curGoals.includes(g.name)
@@ -604,14 +652,14 @@ export default function Setup() {
               })}
             </div>
 
-            {/* Health Challenges */}
+            {/* Health Challenges from DB */}
             <div className="card">
               <div style={{display:'flex',alignItems:'flex-start',gap:8,marginBottom:8}}>
                 <span style={{fontSize:18}}>💗</span>
                 <div style={{flex:1}}>
                   <span style={{fontSize:14,fontWeight:700}}>Current Health Challenges</span>
                   <span style={{fontSize:11,color:'var(--text-light)',marginLeft:6}}>(Optional)</span>
-                  <div style={{fontSize:12,color:'var(--text-light)',marginTop:2}}>Select any health challenges applicable to {curMem?.name?.split(' ')[0]||'this member'}.</div>
+                  <div style={{fontSize:12,color:'var(--text-light)',marginTop:2}}>Select any applicable to {curMem?.name?.split(' ')[0]||'this member'}.</div>
                 </div>
               </div>
               <div className="input-row" style={{marginBottom:10}}>
@@ -619,16 +667,16 @@ export default function Setup() {
                 <input className="inp" placeholder="Search health challenges" value={hcQ} onChange={e=>setHcQ(e.target.value)}/>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-                {curMem&&(mHC[curMem._tid]||[]).map(h=>(
-                  <button key={h} onClick={()=>toggleHC(curMem._tid,h)}
-                    style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                {curHC.map(h=>(
+                  <button key={h} onClick={()=>curMem&&toggleHC(curMem._tid,h)}
+                    style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
                     {h} ×
                   </button>
                 ))}
-                {hcFiltered.filter(h=>!(mHC[curMem?._tid]||[]).includes(h)).map(h=>(
-                  <button key={h} onClick={()=>curMem&&toggleHC(curMem._tid,h)}
-                    style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
-                    + {h}
+                {hcFiltered.filter(h=>!curHC.includes(hcName(h))).map(h=>(
+                  <button key={hcName(h)} onClick={()=>curMem&&toggleHC(curMem._tid,hcName(h))}
+                    style={{padding:'6px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
+                    + {hcName(h)}
                   </button>
                 ))}
               </div>
@@ -652,15 +700,14 @@ export default function Setup() {
           </div>
         )}
 
-        {/* ══ STEP 3: Food Preferences ══ */}
+        {/* ══ STEP 3 ══ */}
         {step===3&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {/* Diet Type */}
             <div className="card">
               <SecH emoji="🍽️" title="Diet Type"/>
               <div style={{fontSize:12,color:'var(--text-light)',marginBottom:12}}>Helps us suggest suitable products</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
-                {[{id:'Vegetarian',emoji:'🌿',desc:'No meat, poultry or fish'},{id:'Eggetarian',emoji:'🥚',desc:'Includes eggs'},{id:'Non-Vegetarian',emoji:'🐟',desc:'Includes meat, poultry & fish'}].map(d=>(
+                {DIET_TYPES.map(d=>(
                   <div key={d.id} onClick={()=>setDiet(d.id)}
                     style={{border:`1.5px solid ${diet===d.id?'var(--green)':'var(--border)'}`,borderRadius:12,padding:'14px 8px',textAlign:'center',cursor:'pointer',background:diet===d.id?'var(--green-pale)':'var(--white)',transition:'all 0.15s',position:'relative'}}>
                     <div style={{position:'absolute',top:8,right:8,width:16,height:16,borderRadius:'50%',border:`2px solid ${diet===d.id?'var(--green)':'var(--border)'}`,background:diet===d.id?'var(--green)':'var(--white)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -674,7 +721,6 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Restrictions */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               <div className="card">
                 <SecH emoji="🥬" title="Veg / Fruit Restrictions"/>
@@ -682,8 +728,8 @@ export default function Setup() {
                 <div style={{display:'flex',gap:6,marginBottom:8}}>
                   {[{v:true,l:'Yes'},{v:false,l:'No restrictions'}].map(o=>(
                     <button key={String(o.v)} onClick={()=>setVegRestr(o.v)}
-                      style={{flex:1,padding:'8px 6px',borderRadius:8,border:`1.5px solid ${vegRestr===o.v?'var(--green)':'var(--border)'}`,background:vegRestr===o.v?'var(--green-pale)':'var(--white)',color:vegRestr===o.v?'var(--green)':'var(--text-mid)',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
-                      {vegRestr===o.v&&<span style={{fontSize:12}}>✅</span>}{o.l}
+                      style={{flex:1,padding:'8px 6px',borderRadius:8,border:`1.5px solid ${vegRestr===o.v?'var(--green)':'var(--border)'}`,background:vegRestr===o.v?'var(--green-pale)':'var(--white)',color:vegRestr===o.v?'var(--green)':'var(--text-mid)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
+                      {vegRestr===o.v&&'✅ '}{o.l}
                     </button>
                   ))}
                 </div>
@@ -698,47 +744,39 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Taste */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                <span style={{fontSize:18}}>💗</span>
-                <span style={{fontSize:14,fontWeight:700}}>Preferred Taste</span>
+                <span style={{fontSize:18}}>💗</span><span style={{fontSize:14,fontWeight:700}}>Preferred Taste</span>
                 <span style={{fontSize:11,color:'var(--text-light)'}}>(Select all that you like)</span>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                {TASTE.map(t=><button key={t} onClick={()=>toggleTaste(t)} className={`pill${taste.includes(t)?' on':''}`}>{taste.includes(t)&&<span>✓ </span>}{t}</button>)}
+                {TASTE.map(t=><button key={t} onClick={()=>toggleTaste(t)} className={`pill${taste.includes(t)?' on':''}`}>{taste.includes(t)&&'✓ '}{t}</button>)}
               </div>
             </div>
 
-            {/* Cooking */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                <span style={{fontSize:18}}>👨‍🍳</span>
-                <span style={{fontSize:14,fontWeight:700}}>Cooking Preference</span>
+                <span style={{fontSize:18}}>👨‍🍳</span><span style={{fontSize:14,fontWeight:700}}>Cooking Preference</span>
                 <span style={{fontSize:11,color:'var(--text-light)'}}>(Select all that apply)</span>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                {COOKING.map(c=><button key={c} onClick={()=>toggleCook(c)} className={`pill${cook.includes(c)?' on':''}`}>{cook.includes(c)&&<span>✓ </span>}{c}</button>)}
+                {COOKING.map(c=><button key={c} onClick={()=>toggleCook(c)} className={`pill${cook.includes(c)?' on':''}`}>{cook.includes(c)&&'✓ '}{c}</button>)}
               </div>
             </div>
 
-            {/* Allergies */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                <span style={{fontSize:18}}>🛡️</span>
-                <span style={{fontSize:14,fontWeight:700}}>Allergies & Restrictions</span>
+                <span style={{fontSize:18}}>🛡️</span><span style={{fontSize:14,fontWeight:700}}>Allergies & Restrictions</span>
                 <span style={{fontSize:11,color:'var(--text-light)'}}>(Select all that apply)</span>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                {ALLERGY.map(a=><button key={a} onClick={()=>toggleAllergy(a)} className={`pill${allergy.includes(a)?' on':''}`}>{allergy.includes(a)&&<span>✓ </span>}{a}</button>)}
+                {ALLERGY.map(a=><button key={a} onClick={()=>toggleAllergy(a)} className={`pill${allergy.includes(a)?' on':''}`}>{allergy.includes(a)&&'✓ '}{a}</button>)}
               </div>
             </div>
 
-            {/* Preferred Plan */}
             <div className="card">
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-                <span style={{fontSize:18}}>📅</span>
-                <span style={{fontSize:14,fontWeight:700}}>Preferred Plan</span>
+                <span style={{fontSize:18}}>📅</span><span style={{fontSize:14,fontWeight:700}}>Preferred Plan</span>
               </div>
               <div style={{fontSize:12,color:'var(--text-light)',marginBottom:12}}>Select a plan that will apply to all family members</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
@@ -761,7 +799,6 @@ export default function Setup() {
         )}
       </div>
 
-      {/* ── Fixed CTA ── */}
       <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:430,background:'var(--white)',borderTop:'1px solid var(--border)',padding:'12px 18px max(16px,env(safe-area-inset-bottom))',zIndex:100}}>
         <button className="btn btn-primary" onClick={proceed} disabled={busy} style={{fontSize:15}}>
           {busy?<span className="spin"/>:step===3?'Get Started  🎉':'Save & Continue  →'}

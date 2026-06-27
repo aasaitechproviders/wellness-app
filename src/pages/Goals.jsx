@@ -21,13 +21,14 @@ const GOALS_META = [
   { name:'Other Goal',         emoji:'···', desc:'Something else in mind?' },
 ]
 
-const HC_LIST = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis']
+// HC_LIST is loaded from DB via api.getHealthChallenges()
 const initials = (n='') => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()
 
 export default function Goals() {
   const { family, updateFamily } = useAuth()
   const nav = useNavigate()
   const [apiGoals, setApiGoals] = useState([])
+  const [apiHC,    setApiHC]    = useState([])
   const [members,  setMembers]  = useState([])
   const [local,    setLocal]    = useState({})
   const [hcLocal,  setHcLocal]  = useState({})
@@ -37,6 +38,7 @@ export default function Goals() {
 
   useEffect(()=>{
     api.getGoals().then(d=>setApiGoals(d.goals||[])).catch(()=>{})
+    api.getHealthChallenges().then(d=>setApiHC(d.challenges||[])).catch(()=>{})
     if(family?._id) api.getFamily(family._id).then(d=>{
       const m=d.family?.members||[]; setMembers(m)
       const init={}; m.forEach(x=>{init[x.memberId]=(x.wellnessGoals||[]).slice(0,3)})

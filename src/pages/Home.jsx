@@ -22,17 +22,19 @@ export default function Home() {
   const [freshFamily, setFreshFamily] = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [addrSheet,   setAddrSheet]   = useState(false)
+  const [cities,       setCities]       = useState(['Coimbatore','Chennai'])
   const [addrSaving,  setAddrSaving]  = useState(false)
   const [addr, setAddr] = useState({ city:'Coimbatore', deliveryType:'individual', aptName:'', tower:'', flat:'', landmark:'', pincode:'' })
 
   useEffect(() => {
+    api.getCities().then(d=>{ if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     if(!family?._id) return
     api.getFamily(family._id).then(d => {
       const f = d.family||family
       setFreshFamily(f)
       // Keep AuthContext in sync so other pages see fresh data
       if (f !== family) updateFamily(f)
-      setAddr({ city:f.city||'Coimbatore', deliveryType:f.deliveryType||'individual', aptName:f.apartmentName||'', tower:f.towerNo||'', flat:f.flatNo||'', landmark:f.landmark||'', pincode:f.pincode||'' })
+      setAddr({ city:f.city||'Coimbatore', deliveryType:f.deliveryType||f.deliveryPreference||'individual', aptName:f.apartmentName||'', tower:f.towerNo||'', flat:f.flatNo||'', landmark:f.landmark||'', pincode:f.pincode||'' })
       const mems = (f.members||[]).filter(m=>m.wellnessGoals?.length)
       const bp = mems.length
         ? api.recommend({members:mems}).then(d=>{ const mr=d.recommendation?.memberResults||[]; const seen=new Set(),flat=[]; for(const r of mr)for(const b of(r.baskets||[])){const k=b._id?.toString();if(!seen.has(k)){seen.add(k);flat.push({...b,_tag:r.memberName})}}; return flat.slice(0,6) }).catch(()=>api.getBaskets({}).then(d=>(d.baskets||[]).slice(0,6)).catch(()=>[]))
@@ -54,6 +56,7 @@ export default function Home() {
     try {
       const r = await api.updateFamily(family._id, {
         city:         addr.city,
+        deliveryType: addr.deliveryType,
         address:      [addr.aptName, addr.flat && `Flat ${addr.flat}`, addr.tower && `Tower ${addr.tower}`].filter(Boolean).join(', ') || addr.aptName || '',
         apartmentName: addr.aptName,
         flatNo:       addr.flat,
@@ -281,7 +284,7 @@ export default function Home() {
                 <div className="field">
                   <label className="label">City</label>
                   <div style={{display:'flex',gap:10}}>
-                    {['Coimbatore','Chennai'].map(c=>(
+                    {cities.map(c=>(
                       <button key={c} onClick={()=>setAddr(p=>({...p,city:c}))} type="button"
                         style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${addr.city===c?'var(--green)':'var(--border)'}`,background:addr.city===c?'var(--green)':'var(--white)',color:addr.city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s'}}>
                         {addr.city===c?'✓ ':''}{c}

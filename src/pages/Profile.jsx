@@ -27,7 +27,7 @@ const ACTIVITY  = [
 ]
 const TASTE_OPT  = ['Sweet','Mild','Tangy','Spicy','Bitter']
 const COOK_OPT   = ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']
-const HC_LIST    = ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues']
+// HC_LIST loaded from DB via apiHC state
 const GOALS_LIST = Object.keys(GOAL_META)
 
 const age = dob => dob ? Math.floor((Date.now()-new Date(dob))/31557600000) : null
@@ -59,6 +59,8 @@ export default function Profile() {
   const nav = useNavigate()
 
   const [f,        setF]        = useState(null)
+  const [apiHC,    setApiHC]    = useState([])
+  const [cities,   setCities]   = useState(['Coimbatore','Chennai'])
   const [loading,  setLoading]  = useState(true)
   const [saving,   setSaving]   = useState(false)
 
@@ -79,6 +81,9 @@ export default function Profile() {
   const load = async () => {
     if (!family?._id) return
     setLoading(true)
+    // Load DB data in parallel
+    api.getHealthChallenges().then(d=>setApiHC(d.challenges||[])).catch(()=>{})
+    api.getCities().then(d=>{ if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     try {
       const d = await api.getFamily(family._id)
       const fresh = d.family
@@ -121,6 +126,7 @@ export default function Profile() {
         email:               fe.email,
         city:                fe.city,
         address:             [fe.apartmentName, fe.flatNo&&`Flat ${fe.flatNo}`, fe.towerNo&&`Tower ${fe.towerNo}`].filter(Boolean).join(', ') || fe.apartmentName || '',
+        deliveryType:        fe.deliveryType,
         apartmentName:       fe.apartmentName,
         flatNo:              fe.flatNo,
         towerNo:             fe.towerNo,
@@ -361,8 +367,7 @@ export default function Profile() {
               {h} ×
             </button>
           ))}
-          {HC_LIST.filter(h=>h.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(h)).map(h=>(
-            <button key={h} onClick={()=>toggleHC(h)}
+          {(apiHC.length ? apiHC : ['Blood Sugar','Blood Pressure','Thyroid','PCOS','Cholesterol','Anaemia','Arthritis','Kidney Issues','Digestive Issues']).filter(h=>h.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(h)).map(h=>(<button key={h} onClick={()=>toggleHC(h)}
               style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
               + {h}
             </button>
@@ -432,10 +437,10 @@ export default function Profile() {
               <div>
                 <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>City</div>
                 <div style={{display:'flex',gap:10}}>
-                  {['Coimbatore','Chennai'].map(c=>(
+                  {cities.map(c=>(
                     <button key={c} onClick={()=>setFe(p=>({...p,city:c}))} type="button"
-                      style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${(fe.city||'Coimbatore')===c?'var(--green)':'var(--border)'}`,background:(fe.city||'Coimbatore')===c?'var(--green)':'var(--white)',color:(fe.city||'Coimbatore')===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s'}}>
-                      {(fe.city||'Coimbatore')===c?'✓ ':''}{c}
+                      style={{flex:1,padding:'13px',borderRadius:12,border:`2px solid ${(fe.city||cities[0])===c?'var(--green)':'var(--border)'}`,background:(fe.city||cities[0])===c?'var(--green)':'var(--white)',color:(fe.city||cities[0])===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s'}}>
+                      {(fe.city||cities[0])===c?'✓ ':''}{c}
                     </button>
                   ))}
                 </div>
