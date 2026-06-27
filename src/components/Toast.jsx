@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react'
-
-let showToastFn = null
-export const showToast = (msg, type = 'default') => showToastFn?.(msg, type)
-
+let _add = null
+export function showToast(msg, type='info') { _add?.({ msg, type, id: Date.now() }) }
 export default function Toast() {
-  const [toast, setToast] = useState(null)
-
-  useEffect(() => {
-    showToastFn = (msg, type) => {
-      setToast({ msg, type })
-      setTimeout(() => setToast(null), 3000)
-    }
-    return () => { showToastFn = null }
-  }, [])
-
-  if (!toast) return null
-  return <div className={`toast ${toast.type}`}>{toast.msg}</div>
+  const [list, setList] = useState([])
+  useEffect(() => { _add = (t) => { setList(p => [...p, t]); setTimeout(() => setList(p => p.filter(x => x.id !== t.id)), 3000) }; return () => { _add = null } }, [])
+  if (!list.length) return null
+  return (
+    <div className="toast-wrap">
+      {list.map(t => (
+        <div key={t.id} className={`toast ${t.type}`}>
+          {t.type==='success'?'✓':t.type==='error'?'✕':'ℹ'} {t.msg}
+        </div>
+      ))}
+    </div>
+  )
 }
