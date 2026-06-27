@@ -129,6 +129,8 @@ export default function Setup() {
 
   /* ── Step 3 ── */
   const [diet,         setDiet]         = useState('Vegetarian')
+  const [vegRestr,     setVegRestr]     = useState(false)
+  const [fruitRestr,   setFruitRestr]   = useState(false)
   const [vegQ,         setVegQ]         = useState('')
   const [fruitQ,       setFruitQ]       = useState('')
   const [dislikedVeg,  setDislikedVeg]  = useState([])
@@ -772,32 +774,37 @@ export default function Setup() {
                 <span style={{fontSize:11,color:'var(--text-light)'}}>(Optional)</span>
               </div>
               <div style={{fontSize:12,color:'var(--text-light)',marginBottom:10}}>These will be excluded from your baskets</div>
-              <div className="input-row" style={{marginBottom:10}}>
-                <span className="input-ico">🔍</span>
-                <input className="inp" placeholder="Search vegetables to exclude…" value={vegQ} onChange={e=>setVegQ(e.target.value)}/>
-              </div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-                {/* Selected chips */}
-                {dislikedVeg.map(v=>(
-                  <button key={v} onClick={()=>setDislikedVeg(p=>p.filter(x=>x!==v))}
-                    style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                    {v} <span style={{fontWeight:700}}>×</span>
+              <div style={{display:'flex',gap:8,marginBottom:10}}>
+                {[{v:false,l:'No restrictions'},{v:true,l:'Yes, I have restrictions'}].map(o=>(
+                  <button key={String(o.v)} onClick={()=>{setVegRestr(o.v);if(!o.v){setDislikedVeg([]);setVegQ('')}}}
+                    style={{flex:1,padding:'8px 6px',borderRadius:8,fontSize:11,fontWeight:600,cursor:'pointer',border:`1.5px solid ${vegRestr===o.v?'var(--green)':'var(--border)'}`,background:vegRestr===o.v?'var(--green-pale)':'var(--white)',color:vegRestr===o.v?'var(--green)':'var(--text-mid)'}}>
+                    {vegRestr===o.v?'✅ ':''}{o.l}
                   </button>
                 ))}
-                {/* Search results (only when searching) */}
-                {vegQ.trim() && VEGETABLES
-                  .filter(v=>v.toLowerCase().includes(vegQ.toLowerCase()) && !dislikedVeg.includes(v))
-                  .map(v=>(
-                    <button key={v} onClick={()=>{setDislikedVeg(p=>[...p,v]);setVegQ('')}}
-                      style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
-                      + {v}
-                    </button>
-                  ))
-                }
-                {!vegQ.trim() && dislikedVeg.length===0 && (
-                  <div style={{fontSize:12,color:'var(--text-light)',padding:'2px 0'}}>Search to add vegetables you dislike</div>
-                )}
               </div>
+              {vegRestr&&(
+                <>
+                  <div className="input-row" style={{marginBottom:10}}>
+                    <span className="input-ico">🔍</span>
+                    <input className="inp" placeholder="Search vegetables to exclude…" value={vegQ} onChange={e=>setVegQ(e.target.value)}/>
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+                    {dislikedVeg.map(v=>(
+                      <button key={v} onClick={()=>setDislikedVeg(p=>p.filter(x=>x!==v))}
+                        style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                        {v} <span style={{fontWeight:700}}>×</span>
+                      </button>
+                    ))}
+                    {vegQ.trim()&&VEGETABLES.filter(v=>v.toLowerCase().includes(vegQ.toLowerCase())&&!dislikedVeg.includes(v)).map(v=>(
+                      <button key={v} onClick={()=>{setDislikedVeg(p=>[...p,v]);setVegQ('')}}
+                        style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
+                        + {v}
+                      </button>
+                    ))}
+                    {!vegQ.trim()&&dislikedVeg.length===0&&<div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Fruit Restrictions */}
@@ -808,32 +815,37 @@ export default function Setup() {
                 <span style={{fontSize:11,color:'var(--text-light)'}}>(Optional)</span>
               </div>
               <div style={{fontSize:12,color:'var(--text-light)',marginBottom:10}}>These will be excluded from your baskets</div>
-              <div className="input-row" style={{marginBottom:10}}>
-                <span className="input-ico">🔍</span>
-                <input className="inp" placeholder="Search fruits to exclude…" value={fruitQ} onChange={e=>setFruitQ(e.target.value)}/>
-              </div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-                {/* Selected chips */}
-                {dislikedFruit.map(f=>(
-                  <button key={f} onClick={()=>setDislikedFruit(p=>p.filter(x=>x!==f))}
-                    style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                    {f} <span style={{fontWeight:700}}>×</span>
+              <div style={{display:'flex',gap:8,marginBottom:10}}>
+                {[{v:false,l:'No restrictions'},{v:true,l:'Yes, I have restrictions'}].map(o=>(
+                  <button key={String(o.v)} onClick={()=>{setFruitRestr(o.v);if(!o.v){setDislikedFruit([]);setFruitQ('')}}}
+                    style={{flex:1,padding:'8px 6px',borderRadius:8,fontSize:11,fontWeight:600,cursor:'pointer',border:`1.5px solid ${fruitRestr===o.v?'var(--green)':'var(--border)'}`,background:fruitRestr===o.v?'var(--green-pale)':'var(--white)',color:fruitRestr===o.v?'var(--green)':'var(--text-mid)'}}>
+                    {fruitRestr===o.v?'✅ ':''}{o.l}
                   </button>
                 ))}
-                {/* Search results (only when searching) */}
-                {fruitQ.trim() && FRUITS
-                  .filter(f=>f.toLowerCase().includes(fruitQ.toLowerCase()) && !dislikedFruit.includes(f))
-                  .map(f=>(
-                    <button key={f} onClick={()=>{setDislikedFruit(p=>[...p,f]);setFruitQ('')}}
-                      style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
-                      + {f}
-                    </button>
-                  ))
-                }
-                {!fruitQ.trim() && dislikedFruit.length===0 && (
-                  <div style={{fontSize:12,color:'var(--text-light)',padding:'2px 0'}}>Search to add fruits you dislike</div>
-                )}
               </div>
+              {fruitRestr&&(
+                <>
+                  <div className="input-row" style={{marginBottom:10}}>
+                    <span className="input-ico">🔍</span>
+                    <input className="inp" placeholder="Search fruits to exclude…" value={fruitQ} onChange={e=>setFruitQ(e.target.value)}/>
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+                    {dislikedFruit.map(f=>(
+                      <button key={f} onClick={()=>setDislikedFruit(p=>p.filter(x=>x!==f))}
+                        style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                        {f} <span style={{fontWeight:700}}>×</span>
+                      </button>
+                    ))}
+                    {fruitQ.trim()&&FRUITS.filter(f=>f.toLowerCase().includes(fruitQ.toLowerCase())&&!dislikedFruit.includes(f)).map(f=>(
+                      <button key={f} onClick={()=>{setDislikedFruit(p=>[...p,f]);setFruitQ('')}}
+                        style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer'}}>
+                        + {f}
+                      </button>
+                    ))}
+                    {!fruitQ.trim()&&dislikedFruit.length===0&&<div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="card">
