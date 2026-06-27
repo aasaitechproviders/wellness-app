@@ -55,12 +55,14 @@ export default function Profile() {
   const { family, updateFamily, logout } = useAuth()
   const nav = useNavigate()
 
-  const [f,        setF]        = useState(null)
-  const [apiGoals, setApiGoals] = useState([])   // from DB
-  const [apiHC,    setApiHC]    = useState([])   // from DB
-  const [cities,   setCities]   = useState([])   // from DB
-  const [loading,  setLoading]  = useState(true)
-  const [saving,   setSaving]   = useState(false)
+  const [f,          setF]          = useState(null)
+  const [apiGoals,   setApiGoals]   = useState([])   // from DB
+  const [apiHC,      setApiHC]      = useState([])   // from DB
+  const [cities,     setCities]     = useState([])   // from DB
+  const [apartments, setApartments] = useState([])   // from DB
+  const [aptLoading, setAptLoading] = useState(false)
+  const [loading,    setLoading]    = useState(true)
+  const [saving,     setSaving]     = useState(false)
 
   const [editSection, setEditSection] = useState(null) // 'family' | memberId | 'new'
   const [fe, setFe] = useState({})   // family edit state
@@ -90,6 +92,16 @@ export default function Profile() {
 
   useEffect(() => { load() }, [family?._id])
 
+  // Load apartments for a given city
+  const loadApartments = (city) => {
+    if (!city) return
+    setAptLoading(true)
+    api.getApartments(city)
+      .then(d => setApartments(d.apartments || []))
+      .catch(() => setApartments([]))
+      .finally(() => setAptLoading(false))
+  }
+
   // ── Build goals list: DB first, fallback to known list ──
   const goalsList = apiGoals.length
     ? apiGoals.map(g => ({ name: g.goalName||g.name, emoji: GOAL_EMOJI[g.goalName||g.name]||'🌿', desc: g.description||'' }))
@@ -100,10 +112,11 @@ export default function Profile() {
 
   // ── Start editing family ──
   const startEditFamily = () => {
+    const savedCity = f?.city || (cities[0] || '')
     setFe({
       familyName:           f?.familyName || '',
       email:                f?.email || '',
-      city:                 f?.city || (cities[0] || ''),
+      city:                 savedCity,
       deliveryType:         f?.deliveryType || 'individual',
       apartmentId:          f?.apartmentId || '',
       apartmentName:        f?.apartmentName || '',
@@ -115,6 +128,8 @@ export default function Profile() {
       deliveryPreference:   f?.deliveryPreference || 'Morning',
       deliveryInstructions: f?.deliveryInstructions || '',
     })
+    // Pre-load apartments for current city
+    if (savedCity) loadApartments(savedCity)
     setEditSection('family')
   }
 
@@ -496,7 +511,7 @@ export default function Profile() {
                 <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>City</div>
                 <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
                   {cities.map(c=>(
-                    <button key={c} onClick={()=>setFe(p=>({...p,city:c}))} type="button"
+                    <button key={c} onClick={()=>{setFe(p=>({...p,city:c,apartmentId:'',apartmentName:''})); loadApartments(c)}} type="button"
                       style={{ flex:1,minWidth:100,padding:'12px',borderRadius:12,border:`2px solid ${fe.city===c?'var(--green)':'var(--border)'}`,background:fe.city===c?'var(--green)':'var(--white)',color:fe.city===c?'#fff':'var(--text-mid)',fontWeight:700,fontSize:14,cursor:'pointer',transition:'all 0.15s' }}>
                       {fe.city===c&&'✓ '}{c}
                     </button>
@@ -513,7 +528,7 @@ export default function Profile() {
                     {id:'gated',     emoji:'🏢',title:'Gated Community / Wellness Partner',sub:'Deliver to your community or partner'},
                   ].map(o=>(
                     <div key={o.id}
-                      onClick={()=>setFe(p=>({...p,deliveryType:o.id}))}
+                      onClick={()=>{setFe(p=>({...p,deliveryType:o.id})); if(o.id==='gated'&&fe.city) loadApartments(fe.city)}}
                       style={{ display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:12,border:`2px solid ${fe.deliveryType===o.id?'var(--green)':'var(--border)'}`,background:fe.deliveryType===o.id?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s' }}>
                       <span style={{ fontSize:22 }}>{o.emoji}</span>
                       <div style={{ flex:1 }}>
@@ -528,11 +543,46 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Apartment / Building */}
-              <div>
-                <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Apartment / Building</div>
-                <input className="inp no-ico" placeholder="e.g. Green Meadows Apartments" value={fe.apartmentName||''} onChange={e=>setFe(p=>({...p,apartmentName:e.target.value}))} />
-              </div>
+              {/* Apartment — DB picker for gated, text input for individual */}
+              {fe.deliveryType==='gated' ? (
+                <div>
+                  <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5 }}>Select Apartment / Community</div>
+                  {aptLoading ? (
+                    <div style={{ padding:'12px',textAlign:'center',color:'var(--text-light)',fontSize:13 }}>Loading apartments…</div>
+                  ) : apartments.length > 0 ? (
+                    <div style={{ display:'flex',flexDirection:'column',gap:8,maxHeight:220,overflowY:'auto' }}>
+                      {apartments.map(apt => {
+                        const aid   = apt._id?.toString() || apt.apartmentId
+                        const aname = apt.apartmentName || apt.name
+                        const sel   = fe.apartmentId===aid || fe.apartmentName===aname
+                        return (
+                          <div key={aid}
+                            onClick={()=>setFe(p=>({...p,apartmentId:aid,apartmentName:aname}))}
+                            style={{ padding:'12px 14px',borderRadius:12,border:`2px solid ${sel?'var(--green)':'var(--border)'}`,background:sel?'var(--green-pale)':'var(--white)',cursor:'pointer',transition:'all 0.15s',display:'flex',alignItems:'center',gap:10 }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:13,fontWeight:700,color:sel?'var(--green)':'var(--text)' }}>{aname}</div>
+                              {apt.city && <div style={{ fontSize:11,color:'var(--text-light)',marginTop:1 }}>{apt.city}</div>}
+                            </div>
+                            {sel && <span style={{ color:'var(--green)',fontSize:18,fontWeight:700 }}>✓</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize:12,color:'var(--text-light)',marginBottom:8 }}>
+                        No registered apartments for {fe.city||'this city'}. Enter manually:
+                      </div>
+                      <input className="inp no-ico" placeholder="e.g. Green Meadows Apartments" value={fe.apartmentName||''} onChange={e=>setFe(p=>({...p,apartmentName:e.target.value,apartmentId:''}))} />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Apartment / Building</div>
+                  <input className="inp no-ico" placeholder="e.g. Green Meadows Apartments" value={fe.apartmentName||''} onChange={e=>setFe(p=>({...p,apartmentName:e.target.value}))} />
+                </div>
+              )}
 
               {/* Tower + Flat */}
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>

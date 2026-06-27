@@ -385,7 +385,7 @@ export default function Setup() {
                   <label className="label">Delivery Location Type</label>
                   <div style={{display:'flex',flexDirection:'column',gap:8}}>
                     {DELIVERY_TYPES.map(o=>(
-                      <div key={o.id} className={`sel-card${dlvType===o.id?' on':''}`} onClick={()=>setDlvType(o.id)}>
+                      <div key={o.id} className={`sel-card${dlvType===o.id?' on':''}`} onClick={()=>{setDlvType(o.id); if(o.id==='gated'&&city) loadApartments(city)}}>
                         <span style={{fontSize:22}}>{o.emoji}</span>
                         <div style={{flex:1}}>
                           <div style={{fontSize:13,fontWeight:700}}>{o.title}</div>
