@@ -60,32 +60,17 @@ function SearchSelect({ placeholder, items, selected, onAdd, onRemove, chipColor
     ? items.filter(it => !selected.includes(it) && it.toLowerCase().includes(q.toLowerCase())).slice(0, maxResults)
     : []
   const chipStyles = {
-    green:  { bg:'var(--green)',    border:'var(--green)',   color:'#fff'          },
-    red:    { bg:'#FFF0F0',         border:'var(--red)',     color:'var(--red)'    },
-    orange: { bg:'#FFF3E0',         border:'#E65100',        color:'#E65100'       },
+    green:  { bg:'var(--green)',  border:'var(--green)', color:'#fff'       },
+    red:    { bg:'#FFF0F0',       border:'var(--red)',   color:'var(--red)' },
+    orange: { bg:'#FFF3E0',       border:'#E65100',      color:'#E65100'    },
   }
   const cs = chipStyles[chipColor] || chipStyles.green
   return (
     <div>
-      {/* Selected chips */}
-      {selected.length>0&&(
-        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
-          {selected.map(s=>(
-            <span key={s} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 11px',
-              borderRadius:20,background:cs.bg,border:`1.5px solid ${cs.border}`,color:cs.color,
-              fontSize:12,fontWeight:600,lineHeight:1.3}}>
-              {s}
-              <span onClick={()=>onRemove(s)}
-                style={{cursor:'pointer',fontWeight:700,fontSize:15,lineHeight:1,marginLeft:2}}>×</span>
-            </span>
-          ))}
-        </div>
-      )}
-      {/* Search box */}
+      {/* Search box first */}
       <div style={{position:'relative'}}>
         <input className="inp no-ico" placeholder={placeholder} value={q}
-          onChange={e=>setQ(e.target.value)}
-          style={{paddingRight:q?36:12}}/>
+          onChange={e=>setQ(e.target.value)} style={{paddingRight:q?36:12}}/>
         {q&&(
           <span onClick={()=>setQ('')}
             style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
@@ -110,10 +95,22 @@ function SearchSelect({ placeholder, items, selected, onAdd, onRemove, chipColor
       {q&&filtered.length===0&&(
         <div style={{fontSize:12,color:'var(--text-light)',marginTop:6,paddingLeft:4}}>No matches found</div>
       )}
-      {!q&&selected.length===0&&(
-        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,paddingLeft:4}}>
-          Type to search and select
+      {/* Selected chips BELOW search */}
+      {selected.length>0&&(
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+          {selected.map(s=>(
+            <span key={s} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 11px',
+              borderRadius:20,background:cs.bg,border:`1.5px solid ${cs.border}`,color:cs.color,
+              fontSize:12,fontWeight:600,lineHeight:1.3}}>
+              {s}
+              <span onClick={()=>onRemove(s)}
+                style={{cursor:'pointer',fontWeight:700,fontSize:15,lineHeight:1,marginLeft:2}}>×</span>
+            </span>
+          ))}
         </div>
+      )}
+      {!q&&selected.length===0&&(
+        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,paddingLeft:4}}>Type to search and select</div>
       )}
     </div>
   )
@@ -137,6 +134,7 @@ const blankMember = () => ({
   metRange:        '',
   lifestyleCode:   '',
   healthConditions:[],
+  wellnessGoals:   [],
   foodRestrictions:[],
   allergies:       [],
   customAllergies: '',
@@ -164,6 +162,7 @@ const memberFromDB = (m) => ({
   activityLevel:   m.activityLevel   || '',
   metRange:        m.metRange        || '',
   lifestyleCode:   m.lifestyleCode   || '',
+  wellnessGoals:   Array.isArray(m.wellnessGoals)    ? m.wellnessGoals    : [],
   healthConditions:Array.isArray(m.healthConditions) ? m.healthConditions : [],
   foodRestrictions:Array.isArray(m.foodRestrictions) ? m.foodRestrictions : [],
   allergies:       Array.isArray(m.allergies)        ? m.allergies        : [],
@@ -192,6 +191,8 @@ export default function Setup() {
   const [healthConditions,setHealthConds]    = useState([])
   const [metRanges,       setMetRanges]      = useState([])
   const [allergyList,     setAllergyList]    = useState([])
+  const [bmiRules,        setBmiRules]       = useState([])
+  const [wellnessGoals,   setWellnessGoals]  = useState([])
   const [products,        setProducts]       = useState([])
 
   /* ── Form states (populated after fresh fetch) ── */
@@ -232,6 +233,8 @@ export default function Setup() {
     api.getLifestyleCodes().then(d => setLifestyleCodes(d.lifestyleCodes||[])).catch(()=>{})
     api.getHealthConditions().then(d => setHealthConds(d.conditions||[])).catch(()=>{})
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
+    api.getBmiRules().then(d => setBmiRules(d.bmiRules||[])).catch(()=>{})
+    api.getWellnessGoals().then(d => setWellnessGoals(d.goals||[])).catch(()=>{})
     api.getProducts({limit:500}).then(d => setProducts(d.products||[])).catch(()=>{})
 
     if (!family?._id) { setInitDone(true); return }
@@ -266,6 +269,17 @@ export default function Setup() {
 
   const addMember    = () => setMembers(prev => [...prev, blankMember()])
   const removeMember = i  => setMembers(prev => prev.filter((_,idx)=>idx!==i))
+
+
+  // ── BMI-based wellness goal recommendation ──
+  const getRecommendedGoal = (height, weight) => {
+    if (!height || !weight) return null
+    const h = parseFloat(height) / 100
+    const bmi = parseFloat(weight) / (h * h)
+    if (isNaN(bmi)) return null
+    const rule = bmiRules.find(r => bmi >= (r.bmiMin||0) && bmi < (r.bmiMax||999))
+    return rule?.recommendedWellnessGoal || null
+  }
 
   /* ─── Products split by category ─── */
   const vegetables = products.filter(p => ['Leafy Vegetables','Roots & Tubers','Gourds','Beans & Legumes'].includes(p.category))
@@ -731,6 +745,57 @@ export default function Setup() {
         ════════════════════════════════════════ */}
         {step===3&&(
           <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:20}}>
+
+            {/* Wellness Goals — per member, BMI-aware */}
+            {members.map((m,i)=>{
+              const recommended = getRecommendedGoal(m.height, m.weight)
+              const goalNames = wellnessGoals.map(g=>g.displayName).filter(Boolean)
+              return (
+                <div key={m.memberId} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
+                  <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
+                    <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
+                      {m.name?initials(m.name):(i+1)}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:14,color:'var(--green)'}}>{m.name||`Member ${i+1}`}</div>
+                      <div style={{fontSize:11,color:'var(--text-light)'}}>Select up to 3 wellness goals</div>
+                    </div>
+                    <span style={{fontSize:11,color:'var(--green)',fontWeight:700}}>{(m.wellnessGoals||[]).length}/3</span>
+                  </div>
+                  <div style={{padding:'14px 16px'}}>
+                    {/* BMI-based recommendation */}
+                    {recommended&&!(m.wellnessGoals||[]).includes(recommended)&&(
+                      <div style={{background:'#FFF8E7',border:'1.5px solid #F5C842',borderRadius:10,padding:'10px 14px',marginBottom:12}}>
+                        <div style={{fontSize:10,fontWeight:700,color:'#B8860B',textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>
+                          ⭐ Recommended based on your BMI
+                        </div>
+                        <button type="button"
+                          onClick={()=>{
+                            if((m.wellnessGoals||[]).length>=3){showToast('Max 3 goals per member','error');return}
+                            setMember(i,'wellnessGoals',[...(m.wellnessGoals||[]),recommended])
+                          }}
+                          style={{padding:'6px 14px',borderRadius:20,border:'1.5px solid #F5C842',
+                            background:'#FFF8E7',color:'#B8860B',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                          + {recommended}
+                        </button>
+                      </div>
+                    )}
+                    {/* Goal search */}
+                    <SearchSelect
+                      placeholder="Search wellness goals…"
+                      items={goalNames}
+                      selected={m.wellnessGoals||[]}
+                      onAdd={v=>{
+                        if((m.wellnessGoals||[]).length>=3){showToast('Max 3 goals per member','error');return}
+                        setMember(i,'wellnessGoals',[...(m.wellnessGoals||[]),v])
+                      }}
+                      onRemove={v=>setMember(i,'wellnessGoals',(m.wellnessGoals||[]).filter(x=>x!==v))}
+                      chipColor="green"
+                    />
+                  </div>
+                </div>
+              )
+            })}
 
             {/* Diet Type — family level */}
             <div>

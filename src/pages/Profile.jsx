@@ -564,14 +564,6 @@ export default function Profile() {
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
           Food Restrictions <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(items you avoid)</span>
         </div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:6 }}>
-          {(me.foodRestrictions||[]).map(fr=>(
-            <button key={fr} onClick={()=>setMe(p=>({...p,foodRestrictions:(p.foodRestrictions||[]).filter(x=>x!==fr)}))}
-              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--red)',background:'#FFF0F0',color:'var(--red)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-              {fr} <span style={{fontWeight:700}}>×</span>
-            </button>
-          ))}
-        </div>
         <input className="inp no-ico" placeholder="Search foods to restrict…" value={me._frQ||''}
           onChange={e=>setMe(p=>({...p,_frQ:e.target.value}))} style={{fontSize:12}}/>
         {(me._frQ||'').trim() && (
@@ -598,14 +590,6 @@ export default function Profile() {
       {/* Allergies */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:6 }}>
-          {(me.allergies||[]).map(a=>(
-            <button key={a} onClick={()=>toggleAllergy(a)}
-              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid #E65100',background:'#FFF3E0',color:'#E65100',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-              ⚠ {a} <span style={{fontWeight:700}}>×</span>
-            </button>
-          ))}
-        </div>
         <input className="inp no-ico" placeholder="Search allergies…" value={me._algQ||''}
           onChange={e=>setMe(p=>({...p,_algQ:e.target.value}))} style={{fontSize:12,marginBottom:4}}/>
         {(me._algQ||'').trim() && (
@@ -621,6 +605,16 @@ export default function Profile() {
                 </div>
               ))
             }
+          </div>
+        )}
+        {(me.allergies||[]).length>0&&(
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+            {(me.allergies||[]).map(a=>(
+              <button key={a} onClick={()=>toggleAllergy(a)}
+                style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid #E65100',background:'#FFF3E0',color:'#E65100',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+                ⚠ {a} <span style={{fontWeight:700}}>×</span>
+              </button>
+            ))}
           </div>
         )}
         <div style={{marginTop:8}}>

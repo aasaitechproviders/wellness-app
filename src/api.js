@@ -59,6 +59,8 @@ export const api = {
   getHealthConditions: () => req('GET', '/setup/health-conditions'),
   getAllergies:         () => req('GET', '/setup/allergies'),
   getMetRanges:        () => req('GET', '/setup/met-ranges'),
+  getBmiRules:         () => req('GET', '/setup/bmi-rules'),
+  getWellnessGoals:    () => req('GET', '/wellness/goals'),
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),
