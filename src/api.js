@@ -58,6 +58,7 @@ export const api = {
   getLifestyleCodes:   () => req('GET', '/setup/lifestyle-codes'),
   getHealthConditions: () => req('GET', '/setup/health-conditions'),
   getAllergies:         () => req('GET', '/setup/allergies'),
+  getMetRanges:        () => req('GET', '/setup/met-ranges'),
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),

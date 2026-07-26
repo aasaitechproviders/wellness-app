@@ -88,6 +88,7 @@ export default function Setup() {
   const [activityLevels,  setActivityLevels] = useState([])
   const [lifestyleCodes,  setLifestyleCodes] = useState([])
   const [healthConditions,setHealthConds]    = useState([])
+  const [metRanges,       setMetRanges]      = useState([])
   const [allergyList,     setAllergyList]    = useState([])
   const [products,        setProducts]       = useState([])
 
@@ -129,6 +130,7 @@ export default function Setup() {
   useEffect(() => {
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     api.getActivityLevels().then(d => setActivityLevels(d.activityLevels||[])).catch(()=>{})
+    api.getMetRanges().then(d => setMetRanges(d.metRanges||[])).catch(()=>{})
     api.getLifestyleCodes().then(d => setLifestyleCodes(d.lifestyleCodes||[])).catch(()=>{})
     api.getHealthConditions().then(d => setHealthConds(d.conditions||[])).catch(()=>{})
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
@@ -161,12 +163,6 @@ export default function Setup() {
   const vegetables = products.filter(p => ['Leafy Vegetables','Roots & Tubers','Gourds','Beans & Legumes'].includes(p.category))
   const fruits     = products.filter(p => p.category === 'Fruits')
   const allForRestrictions = products // full list for food restrictions
-
-  /* ─── Derived per-member MET from activity selection ─── */
-  const getMETFromActivity = (activityLevel) => {
-    const match = activityLevels.find(a => a.activityLevel === activityLevel || a.activityCode === activityLevel)
-    return match?.metRange || ''
-  }
 
   /* ─── STEP SUBMIT HANDLERS ─── */
 
@@ -451,12 +447,7 @@ export default function Setup() {
                     <div className="field">
                       <label className="label">Activity Level</label>
                       <select className="inp no-ico" value={m.activityLevel}
-                        onChange={e=>{
-                          const val=e.target.value
-                          const met=getMETFromActivity(val)
-                          setMember(i,'activityLevel',val)
-                          setMember(i,'metRange',met)
-                        }}>
+                        onChange={e=>setMember(i,'activityLevel',e.target.value)}>
                         <option value="">Select activity level…</option>
                         {activityLevels.map(a=>(
                           <option key={a._id} value={a.activityLevel}>
@@ -466,22 +457,24 @@ export default function Setup() {
                       </select>
                     </div>
 
-                    {/* MET Range — auto-filled from activity level, but editable */}
+                    {/* MET Range — independent self-reported exertion level */}
                     <div className="field">
-                      <label className="label">MET Range
-                        <span className="opt" style={{marginLeft:6}}>
-                          {m.activityLevel?'(auto-filled from activity level)':'(select activity level above)'}
-                        </span>
-                      </label>
+                      <label className="label">MET Range <span className="opt">(self-reported exertion level)</span></label>
                       <select className="inp no-ico" value={m.metRange}
                         onChange={e=>setMember(i,'metRange',e.target.value)}>
                         <option value="">Select MET range…</option>
-                        {activityLevels.map(a=>(
-                          <option key={a._id} value={a.metRange||a.activityLevel}>
-                            {a.displayName||a.activityLevel}{a.metRange?` — MET ${a.metRange}`:''}
-                          </option>
+                        {metRanges.map(r=>(
+                          <option key={r._id} value={r.name}>{r.name}</option>
                         ))}
                       </select>
+                      {m.metRange&&(()=>{
+                        const mr=metRanges.find(r=>r.name===m.metRange)
+                        return mr?.description?(
+                          <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
+                            {mr.description}
+                          </div>
+                        ):null
+                      })()}
                     </div>
 
                     {/* Lifestyle Code */}
