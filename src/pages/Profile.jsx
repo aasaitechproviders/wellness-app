@@ -69,8 +69,8 @@ export default function Profile() {
 
   const [f,          setF]          = useState(null)
   const [apiGoals,   setApiGoals]   = useState([])   // from DB
-  const [apiHC,      setApiHC]      = useState([])   // from DB
-  const [apiPrefs,   setApiPrefs]   = useState({taste:[],cooking:[],allergy:[]}) // from DB
+  const [apiHC,      setApiHC]      = useState([])   // kp_healthConditions
+  const [allergyList,setAllergyList] = useState([])   // kp_allergies
   const [cities,     setCities]     = useState([])   // from DB
   const [apartments, setApartments] = useState([])   // from DB
   const [aptLoading, setAptLoading] = useState(false)
@@ -89,8 +89,8 @@ export default function Profile() {
     setLoading(true)
     // Load all DB data in parallel
     api.getGoals().then(d => setApiGoals(d.goals||[])).catch(()=>{})
-    api.getHealthChallenges().then(d => setApiHC(d.challenges||[])).catch(()=>{})
-    api.getPreferences().then(d => setApiPrefs(d)).catch(()=>{})
+    api.getHealthConditions().then(d => setApiHC(d.conditions||[])).catch(()=>{})
+    api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     try {
       const d = await api.getFamily(family._id)
@@ -122,7 +122,7 @@ export default function Profile() {
     : Object.keys(GOAL_EMOJI).map(name => ({ name, emoji: GOAL_EMOJI[name], desc: '' }))
 
   // ── Health challenges: DB first, fallback ──
-  const hcList = apiHC.length ? apiHC : HC_FALLBACK
+  const hcList = apiHC.length ? apiHC.map(c=>c.conditionName||c.name) : HC_FALLBACK
 
   // ── Start editing family ──
   const startEditFamily = () => {
@@ -536,11 +536,11 @@ export default function Profile() {
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Preferred Taste</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {(apiPrefs.taste.length ? apiPrefs.taste : ['Sweet','Mild','Tangy','Spicy','Bitter']).map(t=>{
+          {['Sweet','Mild','Tangy','Spicy','Bitter'].map(t=>{
             const on=(me.tastePref||[]).includes(t)
             return <button key={t} onClick={()=>toggleTaste(t)} className={`pill${on?' on':''}`}>{on&&'✓ '}{t}</button>
           })}
-          {(me.tastePref||[]).filter(t=>!(apiPrefs.taste.length?apiPrefs.taste:['Sweet','Mild','Tangy','Spicy','Bitter']).includes(t)).map(t=>(
+          {(me.tastePref||[]).filter(t=>!['Sweet','Mild','Tangy','Spicy','Bitter'].includes(t)).map(t=>(
             <button key={t} onClick={()=>toggleTaste(t)} className="pill on">✓ {t} ×</button>
           ))}
           {me._showOtherTaste ? (
@@ -561,11 +561,11 @@ export default function Profile() {
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Cooking Preference</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {(apiPrefs.cooking.length ? apiPrefs.cooking : ['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']).map(c=>{
+          {['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups'].map(c=>{
             const on=(me.cookPref||[]).includes(c)
             return <button key={c} onClick={()=>toggleCook(c)} className={`pill${on?' on':''}`}>{on&&'✓ '}{c}</button>
           })}
-          {(me.cookPref||[]).filter(c=>!(apiPrefs.cooking.length?apiPrefs.cooking:['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups']).includes(c)).map(c=>(
+          {(me.cookPref||[]).filter(c=>!['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups'].includes(c)).map(c=>(
             <button key={c} onClick={()=>toggleCook(c)} className="pill on">✓ {c} ×</button>
           ))}
           {me._showOtherCook ? (
@@ -586,11 +586,11 @@ export default function Profile() {
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies & Restrictions</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {(apiPrefs.allergy.length ? apiPrefs.allergy : ['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']).map(a=>{
+          {allergyList.map(a=>a.name).map(a=>{
             const on=(me.dietaryRestrictions||[]).includes(a)
             return <button key={a} onClick={()=>toggleAllergy(a)} className={`pill${on?' on':''}`}>{on&&'✓ '}{a}</button>
           })}
-          {(me.dietaryRestrictions||[]).filter(a=>!(apiPrefs.allergy.length?apiPrefs.allergy:['Nut Allergy','Gluten Sensitivity','Lactose Intolerance']).includes(a)).map(a=>(
+          {(me.dietaryRestrictions||[]).filter(a=>!allergyList.map(x=>x.name).includes(a)).map(a=>(
             <button key={a} onClick={()=>toggleAllergy(a)} className="pill on">✓ {a} ×</button>
           ))}
           {me._showOtherAllergy ? (
