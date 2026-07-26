@@ -118,7 +118,9 @@ export default function Profile() {
 
   // ── Build goals list: DB first, fallback to known list ──
   const goalsList = apiGoals.length
-    ? apiGoals.map(g => ({ name: g.goalName||g.name, emoji: GOAL_EMOJI[g.goalName||g.name]||'🌿', desc: g.description||'' }))
+    ? apiGoals
+        .map(g => ({ name: g.displayName||g.goalName||g.name||'', emoji: GOAL_EMOJI[g.displayName||g.goalName||g.name]||'🌿', desc: g.goalDescription||g.description||'' }))
+        .filter(g => g.name)   // drop any with empty name
     : Object.keys(GOAL_EMOJI).map(name => ({ name, emoji: GOAL_EMOJI[name], desc: '' }))
 
   // ── Health challenges: DB first, fallback ──
@@ -412,7 +414,7 @@ export default function Profile() {
         </div>
         <input className="inp no-ico" placeholder="Search goals…" value={goalSearch} onChange={e=>setGoalSearch(e.target.value)} style={{ marginBottom:8,fontSize:12 }} />
         <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-          {goalsList.filter(g=>g.name.toLowerCase().includes(goalSearch.toLowerCase())).map(g=>{
+          {goalsList.filter(g=>g.name && g.name.toLowerCase().includes(goalSearch.toLowerCase())).map(g=>{
             const on=(me.wellnessGoals||[]).includes(g.name)
             return (
               <button key={g.name} onClick={()=>toggleGoal(g.name)}
@@ -438,7 +440,7 @@ export default function Profile() {
             </button>
           ))}
           {hcSearch.trim() && hcList
-            .filter(h => { const n=typeof h==='string'?h:h.name||''; return n.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(n) })
+            .filter(h => { const n=typeof h==='string'?h:(h||''); return n && n.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(n) })
             .map(h => { const n=typeof h==='string'?h:h.name||''; return (
               <button key={n} onClick={()=>toggleHC(n)}
                 style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
@@ -476,7 +478,7 @@ export default function Profile() {
                 </button>
               ))}
               {(me._vegQ||'').trim() && VEGETABLES_LIST
-                .filter(v=>v.toLowerCase().includes((me._vegQ||'').toLowerCase())&&!(me.dislikedVeg||[]).includes(v))
+                .filter(v=>v && v.toLowerCase().includes((me._vegQ||'').toLowerCase())&&!(me.dislikedVeg||[]).includes(v))
                 .map(v=>(
                   <button key={v} onClick={()=>setMe(p=>({...p,dislikedVeg:[...(p.dislikedVeg||[]),v],_vegQ:''}))}
                     style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
@@ -516,7 +518,7 @@ export default function Profile() {
                 </button>
               ))}
               {(me._fruitQ||'').trim() && FRUITS_LIST
-                .filter(f=>f.toLowerCase().includes((me._fruitQ||'').toLowerCase())&&!(me.dislikedFruit||[]).includes(f))
+                .filter(f=>f && f.toLowerCase().includes((me._fruitQ||'').toLowerCase())&&!(me.dislikedFruit||[]).includes(f))
                 .map(f=>(
                   <button key={f} onClick={()=>setMe(p=>({...p,dislikedFruit:[...(p.dislikedFruit||[]),f],_fruitQ:''}))}
                     style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
