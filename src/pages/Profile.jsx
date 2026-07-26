@@ -69,8 +69,12 @@ export default function Profile() {
 
   const [f,          setF]          = useState(null)
   const [apiGoals,   setApiGoals]   = useState([])   // from DB
-  const [apiHC,      setApiHC]      = useState([])   // kp_healthConditions
-  const [allergyList,setAllergyList] = useState([])   // kp_allergies
+  const [apiHC,         setApiHC]         = useState([])  // kp_healthConditions
+  const [allergyList,   setAllergyList]   = useState([])  // kp_allergies
+  const [activityLevels,setActivityLevels]= useState([])  // kp_activityLevels
+  const [metRanges,     setMetRanges]     = useState([])  // kp_metRanges
+  const [lifestyleCodes,setLifestyleCodes]= useState([])  // kp_lifestyleCodes
+  const [productList,   setProductList]   = useState([])  // kp_products
   const [cities,     setCities]     = useState([])   // from DB
   const [apartments, setApartments] = useState([])   // from DB
   const [aptLoading, setAptLoading] = useState(false)
@@ -91,6 +95,10 @@ export default function Profile() {
     api.getGoals().then(d => setApiGoals(d.goals||[])).catch(()=>{})
     api.getHealthConditions().then(d => setApiHC(d.conditions||[])).catch(()=>{})
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
+    api.getActivityLevels().then(d => setActivityLevels(d.activityLevels||[])).catch(()=>{})
+    api.getMetRanges().then(d => setMetRanges(d.metRanges||[])).catch(()=>{})
+    api.getLifestyleCodes().then(d => setLifestyleCodes(d.lifestyleCodes||[])).catch(()=>{})
+    api.getProducts({limit:500}).then(d => setProductList(d.products||[])).catch(()=>{})
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     try {
       const d = await api.getFamily(family._id)
@@ -203,21 +211,22 @@ export default function Profile() {
       gender:              m.gender || 'Female',
       height:              m.height ? String(m.height) : '',
       weight:              m.weight ? String(m.weight) : '',
-      activityLevel:       m.activityLevel || 'moderate',
-      dietType:            m.dietType || 'Vegetarian',
-      wellnessGoals:       [...(m.wellnessGoals || [])],
-      healthChallenges:    [...(m.healthChallenges || [])],
-      tastePref:           [...(m.tastePref || [])],
-      cookPref:            [...(m.cookPref || [])],
-      dietaryRestrictions: [...(m.dietaryRestrictions || [])],
-      dislikedVeg:         [...(m.dislikedVeg || [])],
-      dislikedFruit:       [...(m.dislikedFruit || [])],
-      vegFruitRestriction: m.vegFruitRestriction ?? false,
-      preferredPlan:       m.preferredPlan || '',
-      _vegQ:               '',
-      _fruitQ:             '',
-      _vegRestr:           (m.dislikedVeg||[]).length > 0,
-      _fruitRestr:         (m.dislikedFruit||[]).length > 0,
+      activityLevel:    m.activityLevel   || '',
+      metRange:         m.metRange        || '',
+      lifestyleCode:    m.lifestyleCode   || '',
+      dietType:         m.dietType        || 'Vegetarian',
+      wellnessGoals:    [...(m.wellnessGoals    || [])],
+      healthConditions: [...(m.healthConditions || m.healthChallenges || [])],
+      foodRestrictions: [...(m.foodRestrictions || [])],
+      allergies:        [...(m.allergies        || m.dietaryRestrictions || [])],
+      customAllergies:  Array.isArray(m.customAllergies) ? m.customAllergies.join(', ') : (m.customAllergies||''),
+      dislikedVeg:      [...(m.dislikedVeg      || [])],
+      dislikedFruit:    [...(m.dislikedFruit    || [])],
+      preferredPlan:    m.preferredPlan   || '',
+      _vegQ:            '',
+      _fruitQ:          '',
+      _vegRestr:        (m.dislikedVeg||[]).length > 0,
+      _fruitRestr:      (m.dislikedFruit||[]).length > 0,
     })
     setEditSection(m.memberId)
     setGoalSearch(''); setHcSearch('')
@@ -233,21 +242,22 @@ export default function Profile() {
       gender:              'Female',
       height:              '',
       weight:              '',
-      activityLevel:       'moderate',
-      dietType:            'Vegetarian',
-      wellnessGoals:       [],
-      healthChallenges:    [],
-      tastePref:           [],
-      cookPref:            [],
-      dietaryRestrictions: [],
-      dislikedVeg:         [],
-      dislikedFruit:       [],
-      vegFruitRestriction: false,
-      preferredPlan:       '',
-      _vegQ:               '',
-      _fruitQ:             '',
-      _vegRestr:           false,
-      _fruitRestr:         false,
+      activityLevel:    '',
+      metRange:         '',
+      lifestyleCode:    '',
+      dietType:         'Vegetarian',
+      wellnessGoals:    [],
+      healthConditions: [],
+      foodRestrictions: [],
+      allergies:        [],
+      customAllergies:  '',
+      dislikedVeg:      [],
+      dislikedFruit:    [],
+      preferredPlan:    '',
+      _vegQ:            '',
+      _fruitQ:          '',
+      _vegRestr:        false,
+      _fruitRestr:      false,
     })
     setEditSection('new')
     setGoalSearch(''); setHcSearch('')
@@ -265,17 +275,18 @@ export default function Profile() {
         gender:              me.gender,
         height:              me.height ? parseFloat(me.height) : null,
         weight:              me.weight ? parseFloat(me.weight) : null,
-        activityLevel:       me.activityLevel,
-        dietType:            me.dietType,
-        wellnessGoals:       me.wellnessGoals,
-        healthChallenges:    me.healthChallenges,
-        tastePref:           me.tastePref,
-        cookPref:            me.cookPref,
-        dietaryRestrictions: me.dietaryRestrictions,
-        dislikedVeg:         me.dislikedVeg,
-        dislikedFruit:       me.dislikedFruit,
-        vegFruitRestriction: me.vegFruitRestriction,
-        preferredPlan:       me.preferredPlan || null,
+        activityLevel:    me.activityLevel,
+        metRange:         me.metRange,
+        lifestyleCode:    me.lifestyleCode,
+        dietType:         me.dietType,
+        wellnessGoals:    me.wellnessGoals,
+        healthConditions: me.healthConditions,
+        foodRestrictions: me.foodRestrictions,
+        allergies:        me.allergies,
+        customAllergies:  (me.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
+        dislikedVeg:      me.dislikedVeg,
+        dislikedFruit:    me.dislikedFruit,
+        preferredPlan:    me.preferredPlan || null,
       }
       if (me.memberId === 'new') {
         await api.addMember(f._id, payload)
@@ -303,10 +314,8 @@ export default function Profile() {
   }
 
   const toggleGoal  = g => setMe(p => { const c=p.wellnessGoals||[]; if(!c.includes(g)&&c.length>=3){showToast('Max 3 goals per member','error');return p}; return {...p,wellnessGoals:c.includes(g)?c.filter(x=>x!==g):[...c,g]} })
-  const toggleHC    = h => setMe(p => { const c=p.healthChallenges||[];   return {...p,healthChallenges:c.includes(h)?c.filter(x=>x!==h):[...c,h]} })
-  const toggleTaste = t => setMe(p => { const c=p.tastePref||[];           return {...p,tastePref:c.includes(t)?c.filter(x=>x!==t):[...c,t]} })
-  const toggleCook  = c => setMe(p => { const x=p.cookPref||[];            return {...p,cookPref:x.includes(c)?x.filter(y=>y!==c):[...x,c]} })
-  const toggleAllergy = a => setMe(p => { const c=p.dietaryRestrictions||[]; return {...p,dietaryRestrictions:c.includes(a)?c.filter(x=>x!==a):[...c,a]} })
+  const toggleHC    = h => setMe(p => { const c=p.healthConditions||[];  return {...p,healthConditions:c.includes(h)?c.filter(x=>x!==h):[...c,h]} })
+  const toggleAllergy = a => setMe(p => { const c=p.allergies||[]; return {...p,allergies:c.includes(a)?c.filter(x=>x!==a):[...c,a]} })
 
   const handleLogout = () => {
     if (window.confirm('Log out of Krisha Pure?')) { logout(); nav('/login',{replace:true}) }
@@ -381,15 +390,34 @@ export default function Profile() {
       {/* Activity Level */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Activity Level</div>
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6 }}>
-          {ACTIVITY.map(a=>(
-            <button key={a.id} onClick={()=>setMe(p=>({...p,activityLevel:a.id}))}
-              style={{ padding:'8px 4px',borderRadius:8,border:`1.5px solid ${me.activityLevel===a.id?'var(--green)':'var(--border)'}`,background:me.activityLevel===a.id?'var(--green-pale)':'var(--white)',color:me.activityLevel===a.id?'var(--green)':'var(--text-mid)',fontSize:10,fontWeight:700,cursor:'pointer',textAlign:'center' }}>
-              <div style={{ fontSize:18,marginBottom:2 }}>{a.emoji}</div>
-              {a.label.split(' ')[0]}
-            </button>
+        <select className="inp no-ico" value={me.activityLevel||''} onChange={e=>setMe(p=>({...p,activityLevel:e.target.value}))}>
+          <option value="">Select activity level…</option>
+          {activityLevels.map(a=>(
+            <option key={a._id} value={a.activityLevel}>{a.displayName||a.activityLevel}</option>
           ))}
-        </div>
+        </select>
+      </div>
+
+      {/* MET Range */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>MET Range</div>
+        <select className="inp no-ico" value={me.metRange||''} onChange={e=>setMe(p=>({...p,metRange:e.target.value}))}>
+          <option value="">Select MET range…</option>
+          {metRanges.map(r=>(
+            <option key={r._id} value={r.name}>{r.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Lifestyle Code */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Lifestyle</div>
+        <select className="inp no-ico" value={me.lifestyleCode||''} onChange={e=>setMe(p=>({...p,lifestyleCode:e.target.value}))}>
+          <option value="">Select lifestyle…</option>
+          {lifestyleCodes.map(l=>(
+            <option key={l._id} value={l.lifestyleCode}>{l.lifestyleName}</option>
+          ))}
+        </select>
       </div>
 
       {/* Diet Type */}
@@ -433,14 +461,14 @@ export default function Profile() {
         </div>
         <input className="inp no-ico" placeholder="Search challenges…" value={hcSearch} onChange={e=>setHcSearch(e.target.value)} style={{ marginBottom:8,fontSize:12 }} />
         <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-          {(me.healthChallenges||[]).map(h=>(
+          {(me.healthConditions||[]).map(h=>(
             <button key={h} onClick={()=>toggleHC(h)}
               style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
               {h} <span style={{fontWeight:700}}>×</span>
             </button>
           ))}
           {hcSearch.trim() && hcList
-            .filter(h => { const n=typeof h==='string'?h:(h||''); return n && n.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthChallenges||[]).includes(n) })
+            .filter(h => { const n=typeof h==='string'?h:(h||''); return n && n.toLowerCase().includes(hcSearch.toLowerCase())&&!(me.healthConditions||[]).includes(n) })
             .map(h => { const n=typeof h==='string'?h:h.name||''; return (
               <button key={n} onClick={()=>toggleHC(n)}
                 style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
@@ -448,10 +476,44 @@ export default function Profile() {
               </button>
             )})
           }
-          {!hcSearch.trim() && !(me.healthChallenges||[]).length && (
+          {!hcSearch.trim() && !(me.healthConditions||[]).length && (
             <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
           )}
         </div>
+      </div>
+
+      {/* Food Restrictions */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
+          Food Restrictions <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(items you avoid)</span>
+        </div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:6 }}>
+          {(me.foodRestrictions||[]).map(fr=>(
+            <button key={fr} onClick={()=>setMe(p=>({...p,foodRestrictions:(p.foodRestrictions||[]).filter(x=>x!==fr)}))}
+              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--red)',background:'#FFF0F0',color:'var(--red)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
+              {fr} <span style={{fontWeight:700}}>×</span>
+            </button>
+          ))}
+        </div>
+        <input className="inp no-ico" placeholder="Search foods to restrict…" value={me._frQ||''}
+          onChange={e=>setMe(p=>({...p,_frQ:e.target.value}))} style={{fontSize:12}}/>
+        {(me._frQ||'').trim() && (
+          <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,background:'#fff',maxHeight:160,overflowY:'auto'}}>
+            {productList
+              .filter(p=>p.name && p.name.toLowerCase().includes((me._frQ||'').toLowerCase()) && !(me.foodRestrictions||[]).includes(p.name))
+              .slice(0,15)
+              .map(p=>(
+                <div key={p._id} onClick={()=>setMe(prev=>({...prev,foodRestrictions:[...(prev.foodRestrictions||[]),p.name],_frQ:''}))}
+                  style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)',display:'flex',gap:8,alignItems:'center'}}
+                  onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+                  onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+                  <span style={{fontSize:10,color:'var(--text-light)',minWidth:80}}>{p.category}</span>
+                  <span style={{fontWeight:600}}>+ {p.name}</span>
+                </div>
+              ))
+            }
+          </div>
+        )}
       </div>
 
       {/* Disliked Vegetables */}
@@ -534,78 +596,40 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Preferred Taste — DB driven */}
+      {/* Allergies */}
       <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Preferred Taste</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {['Sweet','Mild','Tangy','Spicy','Bitter'].map(t=>{
-            const on=(me.tastePref||[]).includes(t)
-            return <button key={t} onClick={()=>toggleTaste(t)} className={`pill${on?' on':''}`}>{on&&'✓ '}{t}</button>
-          })}
-          {(me.tastePref||[]).filter(t=>!['Sweet','Mild','Tangy','Spicy','Bitter'].includes(t)).map(t=>(
-            <button key={t} onClick={()=>toggleTaste(t)} className="pill on">✓ {t} ×</button>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:6 }}>
+          {(me.allergies||[]).map(a=>(
+            <button key={a} onClick={()=>toggleAllergy(a)}
+              style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid #E65100',background:'#FFF3E0',color:'#E65100',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
+              ⚠ {a} <span style={{fontWeight:700}}>×</span>
+            </button>
           ))}
-          {me._showOtherTaste ? (
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:130,outline:'none'}}
-                placeholder="Type & press Enter" value={me._otherTaste||''} autoFocus
-                onChange={e=>setMe(p=>({...p,_otherTaste:e.target.value}))}
-                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherTaste||'').trim()){setMe(p=>({...p,tastePref:[...(p.tastePref||[]),p._otherTaste.trim()],_otherTaste:'',_showOtherTaste:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherTaste:false}))}}/>
-              <button onClick={()=>{if((me._otherTaste||'').trim())setMe(p=>({...p,tastePref:[...(p.tastePref||[]),p._otherTaste.trim()],_otherTaste:'',_showOtherTaste:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
-            </div>
-          ) : (
-            <button onClick={()=>setMe(p=>({...p,_showOtherTaste:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
-          )}
         </div>
-      </div>
-
-      {/* Cooking Preference — DB driven */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Cooking Preference</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups'].map(c=>{
-            const on=(me.cookPref||[]).includes(c)
-            return <button key={c} onClick={()=>toggleCook(c)} className={`pill${on?' on':''}`}>{on&&'✓ '}{c}</button>
-          })}
-          {(me.cookPref||[]).filter(c=>!['Quick Cooking','Traditional Cooking','Salads','Juices','Smoothies','Soups'].includes(c)).map(c=>(
-            <button key={c} onClick={()=>toggleCook(c)} className="pill on">✓ {c} ×</button>
-          ))}
-          {me._showOtherCook ? (
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
-                placeholder="Type & press Enter" value={me._otherCook||''} autoFocus
-                onChange={e=>setMe(p=>({...p,_otherCook:e.target.value}))}
-                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherCook||'').trim()){setMe(p=>({...p,cookPref:[...(p.cookPref||[]),p._otherCook.trim()],_otherCook:'',_showOtherCook:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherCook:false}))}}/>
-              <button onClick={()=>{if((me._otherCook||'').trim())setMe(p=>({...p,cookPref:[...(p.cookPref||[]),p._otherCook.trim()],_otherCook:'',_showOtherCook:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
-            </div>
-          ) : (
-            <button onClick={()=>setMe(p=>({...p,_showOtherCook:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
-          )}
-        </div>
-      </div>
-
-      {/* Allergies & Restrictions — DB driven */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies & Restrictions</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
-          {allergyList.map(a=>a.name).map(a=>{
-            const on=(me.dietaryRestrictions||[]).includes(a)
-            return <button key={a} onClick={()=>toggleAllergy(a)} className={`pill${on?' on':''}`}>{on&&'✓ '}{a}</button>
-          })}
-          {(me.dietaryRestrictions||[]).filter(a=>!allergyList.map(x=>x.name).includes(a)).map(a=>(
-            <button key={a} onClick={()=>toggleAllergy(a)} className="pill on">✓ {a} ×</button>
-          ))}
-          {me._showOtherAllergy ? (
-            <div style={{display:'flex',gap:6,alignItems:'center'}}>
-              <input style={{padding:'5px 10px',borderRadius:20,border:'1.5px solid var(--green)',fontSize:12,width:150,outline:'none'}}
-                placeholder="Type & press Enter" value={me._otherAllergy||''} autoFocus
-                onChange={e=>setMe(p=>({...p,_otherAllergy:e.target.value}))}
-                onKeyDown={e=>{if(e.key==='Enter'&&(me._otherAllergy||'').trim()){setMe(p=>({...p,dietaryRestrictions:[...(p.dietaryRestrictions||[]),p._otherAllergy.trim()],_otherAllergy:'',_showOtherAllergy:false}))}if(e.key==='Escape')setMe(p=>({...p,_showOtherAllergy:false}))}}/>
-              <button onClick={()=>{if((me._otherAllergy||'').trim())setMe(p=>({...p,dietaryRestrictions:[...(p.dietaryRestrictions||[]),p._otherAllergy.trim()],_otherAllergy:'',_showOtherAllergy:false}))}} className="pill on" style={{padding:'5px 10px'}}>Add</button>
-            </div>
-          ) : (
-            <button onClick={()=>setMe(p=>({...p,_showOtherAllergy:true}))} className="pill" style={{borderStyle:'dashed'}}>+ Others</button>
-          )}
+        <input className="inp no-ico" placeholder="Search allergies…" value={me._algQ||''}
+          onChange={e=>setMe(p=>({...p,_algQ:e.target.value}))} style={{fontSize:12,marginBottom:4}}/>
+        {(me._algQ||'').trim() && (
+          <div style={{border:'1.5px solid var(--border)',borderRadius:10,background:'#fff',maxHeight:140,overflowY:'auto'}}>
+            {allergyList
+              .filter(a=>a.name && a.name.toLowerCase().includes((me._algQ||'').toLowerCase()) && !(me.allergies||[]).includes(a.name))
+              .map(a=>(
+                <div key={a._id} onClick={()=>setMe(p=>({...p,allergies:[...(p.allergies||[]),a.name],_algQ:''}))}
+                  style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)'}}
+                  onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+                  onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+                  + {a.name}
+                </div>
+              ))
+            }
+          </div>
+        )}
+        <div style={{marginTop:8}}>
+          <div style={{fontSize:11,color:'var(--text-light)',marginBottom:4}}>Other Allergies (not in list — comma separated)</div>
+          <input className="inp no-ico" placeholder="e.g. Mango latex, Specific spice…"
+            value={me.customAllergies||''}
+            onChange={e=>setMe(p=>({...p,customAllergies:e.target.value}))}
+            style={{fontSize:12}}/>
         </div>
       </div>
 
@@ -893,16 +917,16 @@ export default function Profile() {
                       </div>
                     )}
 
-                    {m.healthChallenges?.length>0 && (
+                    {(m.healthConditions||m.healthChallenges||[]).length>0 && (
                       <div style={{ marginBottom:8 }}>
                         <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Health Challenges</div>
                         <div style={{ display:'flex',flexWrap:'wrap' }}>
-                          {m.healthChallenges.map(h=><Tag key={h} label={h} icon="💊" />)}
+                          {(m.healthConditions||m.healthChallenges||[]).map(h=><Tag key={h} label={h} icon="💊" />)}
                         </div>
                       </div>
                     )}
 
-                    {m.tastePref?.length>0 && (
+                    {false && m.tastePref?.length>0 && (
                       <div style={{ marginBottom:6 }}>
                         <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Taste Preferences</div>
                         <div style={{ display:'flex',flexWrap:'wrap' }}>
@@ -911,7 +935,7 @@ export default function Profile() {
                       </div>
                     )}
 
-                    {m.cookPref?.length>0 && (
+                    {false && m.cookPref?.length>0 && (
                       <div>
                         <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Cooking Preference</div>
                         <div style={{ display:'flex',flexWrap:'wrap' }}>
