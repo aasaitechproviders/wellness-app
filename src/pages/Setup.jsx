@@ -608,46 +608,18 @@ export default function Setup() {
                   {/* ── Health Conditions ── */}
                   <div className="field">
                     <label className="label">Health Conditions</label>
-                    {/* Selected chips */}
-                    {(m.healthConditions||[]).length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
-                        {(m.healthConditions||[]).map(hc=>(
-                          <span key={hc} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',
-                            borderRadius:20,background:'var(--green)',color:'#fff',fontSize:12,fontWeight:600}}>
-                            {hc}
-                            <span onClick={()=>toggleMemberArray(i,'healthConditions',hc)}
-                              style={{cursor:'pointer',fontWeight:700,fontSize:14,lineHeight:1,opacity:.8}}>×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* Search input */}
-                    <input className="inp no-ico" placeholder="Search health conditions…"
-                      value={hcSearch[i]||''}
-                      onChange={e=>setHcSearch(p=>({...p,[i]:e.target.value}))}/>
-                    {/* Filtered list — only show when search has input OR nothing selected yet */}
-                    {(hcSearch[i]||!(m.healthConditions||[]).length)&&healthConditions.length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-                        {healthConditions
-                          .filter(hc=>!(m.healthConditions||[]).includes(hc.conditionName)
-                            && (hc.conditionName||'').toLowerCase().includes((hcSearch[i]||'').toLowerCase()))
-                          .map(hc=>(
-                            <button key={hc._id} type="button"
-                              onClick={()=>{toggleMemberArray(i,'healthConditions',hc.conditionName);setHcSearch(p=>({...p,[i]:''}))}}
-                              style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:500,cursor:'pointer',
-                                border:'1.5px solid var(--border)',background:'#fff',color:'var(--text-mid)'}}>
-                              + {hc.conditionName}
-                            </button>
-                          ))}
-                        {(m.healthConditions||[]).length===0&&!hcSearch[i]&&(
-                          <div style={{fontSize:12,color:'var(--text-light)',width:'100%',paddingTop:4}}>No condition selected — type to search or tap to add</div>
-                        )}
-                      </div>
-                    )}
-                    {/* No Known Condition shortcut */}
+                    <SearchSelect
+                      placeholder="Search health conditions…"
+                      items={healthConditions.map(hc=>hc.conditionName)}
+                      selected={m.healthConditions||[]}
+                      onAdd={v=>toggleMemberArray(i,'healthConditions',v)}
+                      onRemove={v=>toggleMemberArray(i,'healthConditions',v)}
+                      chipColor="green"
+                    />
                     {!(m.healthConditions||[]).includes('No Known Condition')&&(
-                      <button type="button" onClick={()=>{setMembers(prev=>prev.map((mm,idx)=>idx===i?{...mm,healthConditions:['No Known Condition']}:mm))}}
-                        style={{marginTop:6,padding:'5px 12px',borderRadius:20,fontSize:11,fontWeight:600,cursor:'pointer',
+                      <button type="button"
+                        onClick={()=>setMembers(prev=>prev.map((mm,idx)=>idx===i?{...mm,healthConditions:['No Known Condition']}:mm))}
+                        style={{marginTop:8,padding:'6px 14px',borderRadius:20,fontSize:11,fontWeight:600,cursor:'pointer',
                           border:'1.5px dashed var(--border)',background:'#f9f9f9',color:'var(--text-light)'}}>
                         None / No Known Condition
                       </button>
@@ -657,85 +629,27 @@ export default function Setup() {
                   {/* ── Food Restrictions ── */}
                   <div className="field">
                     <label className="label">Food Restrictions <span className="opt">(items you avoid / cannot eat)</span></label>
-                    {/* Selected chips */}
-                    {(m.foodRestrictions||[]).length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
-                        {(m.foodRestrictions||[]).map(fr=>(
-                          <span key={fr} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',
-                            borderRadius:20,background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:12,fontWeight:600}}>
-                            {fr}
-                            <span onClick={()=>toggleMemberArray(i,'foodRestrictions',fr)}
-                              style={{cursor:'pointer',fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* Search input */}
-                    <input className="inp no-ico" placeholder="Search foods to restrict…"
-                      value={frSearch[i]||''}
-                      onChange={e=>setFrSearch(p=>({...p,[i]:e.target.value}))}/>
-                    {/* Filtered list */}
-                    {frSearch[i]&&allForRestrictions.length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-                        {allForRestrictions
-                          .filter(p=>!(m.foodRestrictions||[]).includes(p.name)
-                            && p.name.toLowerCase().includes((frSearch[i]||'').toLowerCase()))
-                          .slice(0,30)
-                          .map(p=>(
-                            <button key={p._id} type="button"
-                              onClick={()=>{toggleMemberArray(i,'foodRestrictions',p.name);setFrSearch(p2=>({...p2,[i]:''}))} }
-                              style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:500,cursor:'pointer',
-                                border:'1.5px solid var(--border)',background:'#fff',color:'var(--text-mid)'}}>
-                              + {p.name}
-                            </button>
-                          ))}
-                        {allForRestrictions.filter(p=>!(m.foodRestrictions||[]).includes(p.name)&&p.name.toLowerCase().includes((frSearch[i]||'').toLowerCase())).length===0&&(
-                          <div style={{fontSize:12,color:'var(--text-light)'}}>No matching items</div>
-                        )}
-                      </div>
-                    )}
-                    {!(frSearch[i])&&(m.foodRestrictions||[]).length===0&&(
-                      <div style={{fontSize:11,color:'var(--text-light)',marginTop:4}}>Type to search and add food items you avoid</div>
-                    )}
+                    <SearchSelect
+                      placeholder="Search foods to restrict…"
+                      items={allForRestrictions.map(p=>p.name)}
+                      selected={m.foodRestrictions||[]}
+                      onAdd={v=>toggleMemberArray(i,'foodRestrictions',v)}
+                      onRemove={v=>toggleMemberArray(i,'foodRestrictions',v)}
+                      chipColor="red"
+                    />
                   </div>
 
                   {/* ── Allergies ── */}
                   <div className="field">
                     <label className="label">Allergies</label>
-                    {/* Selected chips */}
-                    {(m.allergies||[]).length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
-                        {(m.allergies||[]).map(a=>(
-                          <span key={a} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',
-                            borderRadius:20,background:'#FFF3E0',border:'1.5px solid #E65100',color:'#E65100',fontSize:12,fontWeight:600}}>
-                            ⚠ {a}
-                            <span onClick={()=>toggleMemberArray(i,'allergies',a)}
-                              style={{cursor:'pointer',fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* Search input */}
-                    <input className="inp no-ico" placeholder="Search allergies…"
-                      value={algSearch[i]||''}
-                      onChange={e=>setAlgSearch(p=>({...p,[i]:e.target.value}))}/>
-                    {/* Filtered list */}
-                    {(algSearch[i]||!(m.allergies||[]).length)&&allergyList.length>0&&(
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-                        {allergyList
-                          .filter(a=>!(m.allergies||[]).includes(a.name)
-                            && a.name.toLowerCase().includes((algSearch[i]||'').toLowerCase()))
-                          .map(a=>(
-                            <button key={a._id} type="button"
-                              onClick={()=>{toggleMemberArray(i,'allergies',a.name);setAlgSearch(p=>({...p,[i]:''}))}}
-                              style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:500,cursor:'pointer',
-                                border:'1.5px solid var(--border)',background:'#fff',color:'var(--text-mid)'}}>
-                              + {a.name}{a.severity==='Life-threatening'?' 🚨':''}
-                            </button>
-                          ))}
-                      </div>
-                    )}
-                    {/* Custom allergies */}
+                    <SearchSelect
+                      placeholder="Search allergies…"
+                      items={allergyList.map(a=>a.name)}
+                      selected={m.allergies||[]}
+                      onAdd={v=>toggleMemberArray(i,'allergies',v)}
+                      onRemove={v=>toggleMemberArray(i,'allergies',v)}
+                      chipColor="orange"
+                    />
                     <div style={{marginTop:10}}>
                       <label className="label">Other Allergies <span className="opt">(not in list — separate with commas)</span></label>
                       <input className="inp no-ico" placeholder="e.g. Mango latex, Specific spice…"
