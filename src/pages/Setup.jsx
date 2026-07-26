@@ -352,7 +352,6 @@ export default function Setup() {
   }
 
   const submitStep3 = async () => {
-    if(!dietType) return showToast('Select a diet type','error')
     setBusy(true)
     try {
       // Save diet preference at family level
@@ -360,13 +359,16 @@ export default function Setup() {
       // Save liked/disliked veg+fruits per member
       const latestFamily = await api.getFamily(family._id).then(d=>d.family).catch(()=>family)
       const existingMembers = latestFamily?.members || []
+      // Track which memberIds we've processed to avoid duplicates
+      const processedIds = new Set()
       for(const m of members) {
+        if(processedIds.has(m.memberId)) continue
+        processedIds.add(m.memberId)
         const clean = {
           ...m,
           customAllergies: (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
         }
         const existing = existingMembers.find(e=>e.memberId===m.memberId)
-                      || existingMembers.find(e=>e.name===m.name)
         if(existing?.memberId) {
           await api.updateMember(family._id, existing.memberId, clean).catch(()=>{})
         } else {
