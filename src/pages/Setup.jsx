@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
@@ -176,12 +176,18 @@ const memberFromDB = (m) => ({
 })
 
 
-// Stable input component — prevents focus loss on parent re-render
+// Stable input — local state, syncs to parent only on blur
+// useRef for the input so React never remounts it
 function StableInput({ value, onCommit, placeholder, className, type, max, style }) {
-  const [local, setLocal] = useState(value || '')
-  // Sync if parent value changes externally (e.g. on load)
-  const prevValue = useState(value)[0]
-  if (prevValue !== local && value !== local) setLocal(value || '')
+  const [local, setLocal] = useState(value ?? '')
+  const committed = useRef(value ?? '')
+  // Only sync from parent when value changes externally (not from typing)
+  useEffect(() => {
+    if (value !== committed.current) {
+      setLocal(value ?? '')
+      committed.current = value ?? ''
+    }
+  }, [value])
   return (
     <input
       className={className || 'inp no-ico'}
@@ -191,7 +197,7 @@ function StableInput({ value, onCommit, placeholder, className, type, max, style
       style={style}
       value={local}
       onChange={e => setLocal(e.target.value)}
-      onBlur={e => onCommit(e.target.value)}
+      onBlur={e => { committed.current = e.target.value; onCommit(e.target.value) }}
     />
   )
 }
