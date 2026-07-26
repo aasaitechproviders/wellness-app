@@ -627,14 +627,11 @@ export default function Setup() {
                           <option key={r._id} value={r.name}>{r.name}</option>
                         ))}
                       </select>
-                      {m.metRange&&(()=>{
-                        const mr=metRanges.find(r=>r.name===m.metRange)
-                        return mr?.description?(
-                          <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
-                            {mr.description}
-                          </div>
-                        ):null
-                      })()}
+                      {m.metRange && metRanges.find(r=>r.name===m.metRange)?.description && (
+                        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
+                          {metRanges.find(r=>r.name===m.metRange)?.description}
+                        </div>
+                      )}
                     </div>
 
                     {/* Lifestyle Code */}
@@ -649,14 +646,11 @@ export default function Setup() {
                           </option>
                         ))}
                       </select>
-                      {m.lifestyleCode&&(()=>{
-                        const lc=lifestyleCodes.find(l=>l.lifestyleCode===m.lifestyleCode)
-                        return lc?.displayDescription?(
-                          <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
-                            {lc.displayDescription}
-                          </div>
-                        ):null
-                      })()}
+                      {m.lifestyleCode && lifestyleCodes.find(l=>l.lifestyleCode===m.lifestyleCode)?.displayDescription && (
+                        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
+                          {lifestyleCodes.find(l=>l.lifestyleCode===m.lifestyleCode)?.displayDescription}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
