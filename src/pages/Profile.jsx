@@ -51,6 +51,15 @@ const InfoRow = ({ label, value }) => value ? (
   </div>
 ) : null
 
+const ageFromDob = (dob) => {
+  if (!dob) return null
+  try {
+    const d = new Date(dob)
+    if (isNaN(d.getTime())) return null
+    return Math.floor((Date.now() - d.getTime()) / 31557600000)
+  } catch { return null }
+}
+
 const Tag = ({ label, icon }) => (
   <span style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:50,background:'var(--green-pale)',color:'var(--green)',fontSize:11,fontWeight:600,marginRight:5,marginBottom:5 }}>
     {icon} {label}
@@ -580,65 +589,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Liked Vegetables */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🥦 Vegetables You Like</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
-          {(me.likedVegetables||[]).map(v=>(
-            <span key={v} onClick={()=>setMe(p=>({...p,likedVegetables:(p.likedVegetables||[]).filter(x=>x!==v)}))}
-              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'var(--green)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-              {v} ×</span>
-          ))}
-        </div>
-        <MemberSearch placeholder="Search vegetables…"
-          items={VEGETABLES_LIST} selected={me.likedVegetables||[]}
-          onAdd={v=>setMe(p=>({...p,likedVegetables:[...(p.likedVegetables||[]),v]}))}/>
-      </div>
 
-      {/* Disliked Vegetables */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🚫 Vegetables You Dislike</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
-          {(me.dislikedVegetables||[]).map(v=>(
-            <span key={v} onClick={()=>setMe(p=>({...p,dislikedVegetables:(p.dislikedVegetables||[]).filter(x=>x!==v)}))}
-              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-              {v} ×</span>
-          ))}
-        </div>
-        <MemberSearch placeholder="Search vegetables…"
-          items={VEGETABLES_LIST} selected={me.dislikedVegetables||[]}
-          onAdd={v=>setMe(p=>({...p,dislikedVegetables:[...(p.dislikedVegetables||[]),v]}))}/>
-      </div>
-
-      {/* Liked Fruits */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🍎 Fruits You Like</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
-          {(me.likedFruits||[]).map(f=>(
-            <span key={f} onClick={()=>setMe(p=>({...p,likedFruits:(p.likedFruits||[]).filter(x=>x!==f)}))}
-              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'var(--green)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-              {f} ×</span>
-          ))}
-        </div>
-        <MemberSearch placeholder="Search fruits…"
-          items={FRUITS_LIST} selected={me.likedFruits||[]}
-          onAdd={v=>setMe(p=>({...p,likedFruits:[...(p.likedFruits||[]),v]}))}/>
-      </div>
-
-      {/* Disliked Fruits */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🚫 Fruits You Dislike</div>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
-          {(me.dislikedFruits||[]).map(f=>(
-            <span key={f} onClick={()=>setMe(p=>({...p,dislikedFruits:(p.dislikedFruits||[]).filter(x=>x!==f)}))}
-              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-              {f} ×</span>
-          ))}
-        </div>
-        <MemberSearch placeholder="Search fruits…"
-          items={FRUITS_LIST} selected={me.dislikedFruits||[]}
-          onAdd={v=>setMe(p=>({...p,dislikedFruits:[...(p.dislikedFruits||[]),v]}))}/>
-      </div>
 
       {/* Allergies */}
       <div style={{ marginBottom:12 }}>

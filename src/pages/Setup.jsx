@@ -200,6 +200,7 @@ export default function Setup() {
     city:''        , deliveryType:'individual',
     apartmentId:'' , apartmentName:'',
     tower:''       , flat:''      , landmark:'', pincode:'',
+    deliveryPreference:'Morning',
   })
   const [members,        setMembers]       = useState([blankMember()])
   const [dietType, setDietType] = useState('')
@@ -217,6 +218,7 @@ export default function Setup() {
       flat:         f.flatNo        || '',
       landmark:     f.landmark      || '',
       pincode:      f.pincode       || '',
+      deliveryPreference: f.deliveryPreference || 'Morning',
     })
     if (f.members?.length) setMembers(f.members.map(memberFromDB))
     setDietType(f.dietPreference || '')
@@ -288,6 +290,7 @@ export default function Setup() {
         flatNo:        form0.flat  || null,
         landmark:      form0.landmark || null,
         pincode:       form0.pincode  || null,
+        deliveryPreference: form0.deliveryPreference || 'Morning',
         address:       [form0.aptName, form0.flat&&`Flat ${form0.flat}`, form0.tower&&`Tower ${form0.tower}`].filter(Boolean).join(', '),
       }
       const r = await api.updateFamily(family._id, body)
@@ -326,11 +329,11 @@ export default function Setup() {
 
   const submitStep1 = async () => {
     if(members.some(m=>!m.name.trim())) return showToast('All members need a name','error')
-    await saveMembersAndNext(2)
+    setStep(2)
   }
 
   const submitStep2 = async () => {
-    await saveMembersAndNext(3)
+    setStep(3)
   }
 
   const submitStep3 = async () => {
@@ -441,7 +444,12 @@ export default function Setup() {
                 <select className="inp no-ico" value={form0.apartmentId}
                   onChange={e=>{
                     const apt=apartments.find(a=>a._id?.toString()===e.target.value||a.apartmentId===e.target.value)
-                    setForm0(p=>({...p,apartmentId:e.target.value,apartmentName:apt?.apartmentName||''}))
+                    setForm0(p=>({...p,
+                      apartmentId:e.target.value,
+                      apartmentName:apt?.apartmentName||'',
+                      pincode:apt?.pincode||p.pincode||'',
+                      landmark:apt?.landmark||apt?.address||p.landmark||'',
+                    }))
                   }}>
                   <option value="">Select apartment…</option>
                   {apartments.map(a=>(
@@ -472,6 +480,22 @@ export default function Setup() {
               <label className="label">Pincode</label>
               <input className="inp no-ico" placeholder="641001" maxLength={6} value={form0.pincode}
                 onChange={e=>setForm0(p=>({...p,pincode:e.target.value.replace(/\D/g,'')}))}/>
+            </div>
+
+            <SecH emoji="🕐" title="Preferred Delivery Time"/>
+            <div style={{display:'flex',gap:8}}>
+              {[{v:'Morning',l:'Morning',t:'7–10 AM'},{v:'Afternoon',l:'Afternoon',t:'12–3 PM'},{v:'Evening',l:'Evening',t:'5–8 PM'}].map(s=>(
+                <button key={s.v} type="button" onClick={()=>setForm0(p=>({...p,deliveryPreference:s.v}))}
+                  style={{flex:1,padding:'10px 4px',borderRadius:10,
+                    border:`2px solid ${form0.deliveryPreference===s.v?'var(--green)':'var(--border)'}`,
+                    background:form0.deliveryPreference===s.v?'var(--green-pale)':'#fff',
+                    color:form0.deliveryPreference===s.v?'var(--green)':'var(--text-mid)',
+                    fontWeight:700,fontSize:12,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                  <span style={{fontSize:9,color:form0.deliveryPreference===s.v?'var(--green)':'var(--text-light)'}}>{s.t}</span>
+                  {s.l}
+                  {form0.deliveryPreference===s.v&&<span>✓</span>}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -728,68 +752,7 @@ export default function Setup() {
               </div>
             </div>
 
-            {/* Per-member food preferences */}
-            {members.map((m,i)=>(
-              <div key={m.memberId} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
-                <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
-                  <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
-                    {m.name?initials(m.name):(i+1)}
-                  </div>
-                  <div style={{fontWeight:700,fontSize:14,color:'var(--green)'}}>{m.name||`Member ${i+1}`}</div>
-                </div>
-                <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:14}}>
 
-                  <div className="field">
-                    <label className="label">🥦 Vegetables You Like</label>
-                    <SearchSelect
-                      placeholder="Search vegetables…"
-                      items={vegetables.map(v=>v.name)}
-                      selected={m.likedVegetables||[]}
-                      onAdd={v=>setMember(i,'likedVegetables',[...(m.likedVegetables||[]),v])}
-                      onRemove={v=>setMember(i,'likedVegetables',(m.likedVegetables||[]).filter(x=>x!==v))}
-                      chipColor="green"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label className="label">🚫 Vegetables You Dislike</label>
-                    <SearchSelect
-                      placeholder="Search vegetables…"
-                      items={vegetables.map(v=>v.name)}
-                      selected={m.dislikedVegetables||[]}
-                      onAdd={v=>setMember(i,'dislikedVegetables',[...(m.dislikedVegetables||[]),v])}
-                      onRemove={v=>setMember(i,'dislikedVegetables',(m.dislikedVegetables||[]).filter(x=>x!==v))}
-                      chipColor="red"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label className="label">🍎 Fruits You Like</label>
-                    <SearchSelect
-                      placeholder="Search fruits…"
-                      items={fruits.map(f=>f.name)}
-                      selected={m.likedFruits||[]}
-                      onAdd={v=>setMember(i,'likedFruits',[...(m.likedFruits||[]),v])}
-                      onRemove={v=>setMember(i,'likedFruits',(m.likedFruits||[]).filter(x=>x!==v))}
-                      chipColor="green"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label className="label">🚫 Fruits You Dislike</label>
-                    <SearchSelect
-                      placeholder="Search fruits…"
-                      items={fruits.map(f=>f.name)}
-                      selected={m.dislikedFruits||[]}
-                      onAdd={v=>setMember(i,'dislikedFruits',[...(m.dislikedFruits||[]),v])}
-                      onRemove={v=>setMember(i,'dislikedFruits',(m.dislikedFruits||[]).filter(x=>x!==v))}
-                      chipColor="red"
-                    />
-                  </div>
-
-                </div>
-              </div>
-            ))}
 
           </div>
         )}
