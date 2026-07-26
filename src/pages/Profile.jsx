@@ -423,13 +423,13 @@ export default function Profile() {
       {/* Name */}
       <div style={{ marginBottom:10 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Full Name *</div>
-        <input className="inp no-ico" placeholder="e.g. Priya" value={me.name||''} onChange={e=>setMe(p=>({...p,name:e.target.value}))} />
+        <input className="inp no-ico" placeholder="e.g. Priya" defaultValue={me.name||''} onBlur={e=>setMe(p=>({...p,name:e.target.value}))} />
       </div>
       {/* DOB + Age */}
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Date of Birth</div>
-          <input className="inp no-ico" type="date" value={me.dob||''} max={new Date().toISOString().split('T')[0]} onChange={e=>{
+          <input className="inp no-ico" type="date" defaultValue={me.dob||''} max={new Date().toISOString().split('T')[0]} onBlur={e=>{
             const d=e.target.value
             const age=ageFromDob(d)
             setMe(p=>({...p,dob:d,ageRaw:age?String(age):p.ageRaw}))
@@ -437,7 +437,7 @@ export default function Profile() {
         </div>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Age</div>
-          <input className="inp no-ico" type="number" inputMode="numeric" min="1" max="110" placeholder="34" value={me.ageRaw||''} onChange={e=>setMe(p=>({...p,ageRaw:e.target.value}))} />
+          <input className="inp no-ico" type="number" inputMode="numeric" min="1" max="110" placeholder="34" defaultValue={me.ageRaw||''} onBlur={e=>setMe(p=>({...p,ageRaw:e.target.value}))} />
         </div>
       </div>
 
@@ -458,11 +458,11 @@ export default function Profile() {
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Height (cm)</div>
-          <input className="inp no-ico" type="number" placeholder="165" value={me.height||''} onChange={e=>setMe(p=>({...p,height:e.target.value}))} />
+          <input className="inp no-ico" type="number" placeholder="165" defaultValue={me.height||''} onBlur={e=>setMe(p=>({...p,height:e.target.value}))} />
         </div>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Weight (kg)</div>
-          <input className="inp no-ico" type="number" placeholder="65" value={me.weight||''} onChange={e=>setMe(p=>({...p,weight:e.target.value}))} />
+          <input className="inp no-ico" type="number" placeholder="65" defaultValue={me.weight||''} onBlur={e=>setMe(p=>({...p,weight:e.target.value}))} />
         </div>
       </div>
 
