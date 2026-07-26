@@ -540,8 +540,11 @@ export default function Setup() {
                     {/* Basic info */}
                     <div className="field">
                       <label className="label">Full Name *</label>
-                      <input className="inp no-ico" placeholder="e.g. Priya" value={m.name}
-                        onChange={e=>setMember(i,'name',e.target.value)}/>
+                      <input className="inp no-ico" placeholder="e.g. Priya"
+                        key={`name-${m.memberId}`}
+                        defaultValue={m.name}
+                        onBlur={e=>setMember(i,'name',e.target.value)}
+                        onChange={e=>e.target.value}/>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                       <div className="field">

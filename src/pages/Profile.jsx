@@ -605,6 +605,17 @@ export default function Profile() {
             }
           </div>
         )}
+        {(me.foodRestrictions||[]).length>0 && (
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+            {(me.foodRestrictions||[]).map(fr=>(
+              <span key={fr} onClick={()=>setMe(p=>({...p,foodRestrictions:(p.foodRestrictions||[]).filter(x=>x!==fr)}))}
+                style={{display:'inline-flex',alignItems:'center',gap:4,padding:'5px 11px',borderRadius:20,
+                  background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                {fr} ×
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
 
@@ -612,9 +623,9 @@ export default function Profile() {
       {/* Allergies */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies</div>
-        <input className="inp no-ico" placeholder="Search allergies…" value={algQ} onChange={e=>setAlgQ(e.target.value)} style={{fontSize:12,marginBottom:4}}/>
+        <input className="inp no-ico" placeholder="Search allergies…" value={algQ} onChange={e=>setAlgQ(e.target.value)} style={{fontSize:12}}/>
         {algQ.trim() && (
-          <div style={{border:'1.5px solid var(--border)',borderRadius:10,background:'#fff',maxHeight:140,overflowY:'auto'}}>
+          <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,background:'#fff',maxHeight:140,overflowY:'auto'}}>
             {allergyList
               .filter(a=>a.name && a.name.toLowerCase().includes(algQ.toLowerCase()) && !(me.allergies||[]).includes(a.name))
               .map(a=>(
@@ -935,9 +946,25 @@ export default function Profile() {
 
                     {(m.healthConditions||m.healthChallenges||[]).length>0 && (
                       <div style={{ marginBottom:8 }}>
-                        <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Health Challenges</div>
+                        <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Health Conditions</div>
                         <div style={{ display:'flex',flexWrap:'wrap' }}>
                           {(m.healthConditions||m.healthChallenges||[]).map(h=><Tag key={h} label={h} icon="💊" />)}
+                        </div>
+                      </div>
+                    )}
+                    {(m.foodRestrictions||[]).length>0 && (
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Food Restrictions</div>
+                        <div style={{ display:'flex',flexWrap:'wrap' }}>
+                          {(m.foodRestrictions||[]).map(r=><Tag key={r} label={r} icon="🚫" />)}
+                        </div>
+                      </div>
+                    )}
+                    {(m.allergies||[]).length>0 && (
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:'var(--text-light)',textTransform:'uppercase',letterSpacing:0.5,marginBottom:5 }}>Allergies</div>
+                        <div style={{ display:'flex',flexWrap:'wrap' }}>
+                          {(m.allergies||[]).map(a=><Tag key={a} label={a} icon="⚠️" />)}
                         </div>
                       </div>
                     )}
