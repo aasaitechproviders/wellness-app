@@ -35,8 +35,9 @@ export const api = {
   getBasket: (id) => req('GET', `/wellness/baskets/${id}`),
   recommend: (body) => req('POST', '/wellness/recommend', body),
 
-  // Ingredients
-  getIngredients: (params) => req('GET', `/ingredients?${new URLSearchParams(params)}`),
+  // Products (replaces old ingredients)
+  getProducts: (params) => req('GET', `/products${params ? '?' + new URLSearchParams(params) : ''}`),
+  getProduct: (id) => req('GET', `/products/${id}`),
 
   // Subscriptions
   getPlans: () => req('GET', '/subscriptions/plans'),
@@ -52,8 +53,11 @@ export const api = {
 
   // Delivery
   getCities: () => req('GET', '/delivery/cities'),
-  getHealthChallenges: () => req('GET', '/delivery/health-challenges'),
-  getPreferences: () => req('GET', '/delivery/preferences'),
+  // Setup data — new kp_* collections
+  getActivityLevels:   () => req('GET', '/setup/activity-levels'),
+  getLifestyleCodes:   () => req('GET', '/setup/lifestyle-codes'),
+  getHealthConditions: () => req('GET', '/setup/health-conditions'),
+  getAllergies:         () => req('GET', '/setup/allergies'),
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),
