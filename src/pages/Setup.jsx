@@ -142,13 +142,40 @@ const blankMember = () => ({
   customAllergies: '',
 })
 
+// Convert any date value to YYYY-MM-DD for <input type="date">
+const toDateInput = (val) => {
+  if (!val) return ''
+  try {
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return String(val).split('T')[0]
+    return d.toISOString().split('T')[0]
+  } catch { return '' }
+}
+
+// Build member state from DB record — maps all fields correctly
+const memberFromDB = (m) => ({
+  ...blankMember(),
+  ...m,
+  dob:             toDateInput(m.dob),
+  activityLevel:   m.activityLevel   || '',
+  metRange:        m.metRange        || '',
+  lifestyleCode:   m.lifestyleCode   || '',
+  healthConditions:Array.isArray(m.healthConditions) ? m.healthConditions : [],
+  foodRestrictions:Array.isArray(m.foodRestrictions) ? m.foodRestrictions : [],
+  allergies:       Array.isArray(m.allergies)        ? m.allergies        : [],
+  customAllergies: Array.isArray(m.customAllergies)
+    ? m.customAllergies.join(', ')
+    : (m.customAllergies || ''),
+})
+
 export default function Setup() {
   const { family, updateFamily } = useAuth()
   const nav = useNavigate()
-  const [step, setStep] = useState(0)
-  const [busy, setBusy]  = useState(false)
+  const [step, setStep]     = useState(0)
+  const [busy, setBusy]     = useState(false)
+  const [initDone, setInitDone] = useState(false)
 
-  /* ── DB-loaded data ── */
+  /* ── DB-loaded dropdown data ── */
   const [cities,          setCities]         = useState([])
   const [apartments,      setApartments]     = useState([])
   const [aptLoading,      setAptLoading]     = useState(false)
@@ -159,50 +186,43 @@ export default function Setup() {
   const [allergyList,     setAllergyList]    = useState([])
   const [products,        setProducts]       = useState([])
 
-  /* ── Step 0 — Personal & Delivery ── */
+  /* ── Form states (populated after fresh fetch) ── */
   const [form0, setForm0] = useState({
-    familyName:   family?.familyName   || '',
-    phone:        family?.phone        || '',
-    email:        family?.email        || '',
-    city:         family?.city         || '',
-    deliveryType: family?.deliveryType || 'individual',
-    apartmentId:  family?.apartmentId  || '',
-    apartmentName:family?.apartmentName|| '',
-    tower:        family?.towerNo      || '',
-    flat:         family?.flatNo       || '',
-    landmark:     family?.landmark     || '',
-    pincode:      family?.pincode      || '',
+    familyName:''  , phone:''     , email:'',
+    city:''        , deliveryType:'individual',
+    apartmentId:'' , apartmentName:'',
+    tower:''       , flat:''      , landmark:'', pincode:'',
   })
+  const [members,        setMembers]       = useState([blankMember()])
+  const [dietType,       setDietType]      = useState('')
+  const [likedVeg,       setLikedVeg]      = useState([])
+  const [dislikedVeg,    setDislikedVeg]   = useState([])
+  const [likedFruits,    setLikedFruits]   = useState([])
+  const [dislikedFruits, setDislikedFruits]= useState([])
 
-  /* ── Step 1 — Family Members ── */
-  const [members, setMembers] = useState(() => {
-    if (family?.members?.length) {
-      return family.members.map(m => ({
-        ...blankMember(),
-        ...m,
-        customAllergies: (m.customAllergies || []).join(', '),
-      }))
-    }
-    return [blankMember()]
-  })
+  const populateFromFamily = (f) => {
+    setForm0({
+      familyName:   f.familyName    || '',
+      phone:        f.phone         || '',
+      email:        f.email         || '',
+      city:         f.city          || '',
+      deliveryType: f.deliveryType  || 'individual',
+      apartmentId:  f.apartmentId   || '',
+      apartmentName:f.apartmentName || '',
+      tower:        f.towerNo       || '',
+      flat:         f.flatNo        || '',
+      landmark:     f.landmark      || '',
+      pincode:      f.pincode       || '',
+    })
+    if (f.members?.length) setMembers(f.members.map(memberFromDB))
+    setDietType(f.dietPreference   || '')
+    setLikedVeg(f.likedVegetables  || [])
+    setDislikedVeg(f.dislikedVegetables || [])
+    setLikedFruits(f.likedFruits   || [])
+    setDislikedFruits(f.dislikedFruits || [])
+  }
 
-  /* ── Search states ── */
-  const [hcSearch,   setHcSearch]   = useState({})
-  const [frSearch,   setFrSearch]   = useState({})
-  const [algSearch,  setAlgSearch]  = useState({})
-  const [vegLikeQ,   setVegLikeQ]   = useState('')
-  const [vegDislikeQ,setVegDislikeQ]= useState('')
-  const [fruitLikeQ, setFruitLikeQ] = useState('')
-  const [fruitDislikeQ,setFruitDislikeQ]= useState('')
-
-  /* ── Step 3 — Food Preferences ── */
-  const [dietType,      setDietType]     = useState(family?.dietPreference || '')
-  const [likedVeg,      setLikedVeg]     = useState(family?.likedVegetables || [])
-  const [dislikedVeg,   setDislikedVeg]  = useState(family?.dislikedVegetables || [])
-  const [likedFruits,   setLikedFruits]  = useState(family?.likedFruits || [])
-  const [dislikedFruits,setDislikedFruits]= useState(family?.dislikedFruits || [])
-
-  /* ── Fetch all DB data on mount ── */
+  /* ── Fetch fresh family + all dropdown data on mount ── */
   useEffect(() => {
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     api.getActivityLevels().then(d => setActivityLevels(d.activityLevels||[])).catch(()=>{})
@@ -211,7 +231,17 @@ export default function Setup() {
     api.getHealthConditions().then(d => setHealthConds(d.conditions||[])).catch(()=>{})
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
     api.getProducts({limit:500}).then(d => setProducts(d.products||[])).catch(()=>{})
-  }, [])
+
+    if (!family?._id) { setInitDone(true); return }
+    api.getFamily(family._id)
+      .then(d => {
+        const f = d.family || family
+        updateFamily(f)
+        populateFromFamily(f)
+      })
+      .catch(() => { if (family) populateFromFamily(family) })
+      .finally(() => setInitDone(true))
+  }, []) // eslint-disable-line
 
   /* ── Load apartments when city changes ── */
   useEffect(() => {
@@ -267,50 +297,40 @@ export default function Setup() {
     finally { setBusy(false) }
   }
 
-  const submitStep1 = async () => {
-    if(members.some(m=>!m.name.trim())) return showToast('All members need a name','error')
+  // Helper — saves all members then moves to next step
+  const saveMembersAndNext = async (nextStep) => {
     setBusy(true)
     try {
-      // Save all members with new fields
-      const toSave = members.map(m => ({
-        ...m,
-        customAllergies: (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
-      }))
-      // Update each member via API
-      const existing = family.members||[]
-      for(const m of toSave) {
-        const isExisting = existing.find(e => e.memberId===m.memberId)
-        if(isExisting) {
-          await api.updateMember(family._id, isExisting._id||isExisting.memberId, m).catch(()=>{})
+      const latestFamily = await api.getFamily(family._id).then(d=>d.family).catch(()=>family)
+      const existingMembers = latestFamily?.members || []
+      for(const m of members) {
+        const clean = {
+          ...m,
+          customAllergies: (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
+        }
+        // Match by memberId, fallback name
+        const existing = existingMembers.find(e=>e.memberId===m.memberId)
+                      || existingMembers.find(e=>e.name===m.name)
+        if(existing?._id) {
+          await api.updateMember(family._id, existing._id, clean).catch(()=>{})
         } else {
-          await api.addMember(family._id, m).catch(()=>{})
+          await api.addMember(family._id, clean).catch(()=>{})
         }
       }
       const r = await api.getFamily(family._id)
       updateFamily(r.family)
-      setStep(2)
+      setStep(nextStep)
     } catch(e) { showToast(e.message,'error') }
     finally { setBusy(false) }
   }
 
+  const submitStep1 = async () => {
+    if(members.some(m=>!m.name.trim())) return showToast('All members need a name','error')
+    await saveMembersAndNext(2)
+  }
+
   const submitStep2 = async () => {
-    // Step 2 is health & restrictions — already stored in members object, just move forward
-    // Save latest member state
-    setBusy(true)
-    try {
-      const toSave = members.map(m => ({
-        ...m,
-        customAllergies: (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
-      }))
-      for(const m of toSave) {
-        const existing = (family.members||[]).find(e=>e.memberId===m.memberId)
-        if(existing) await api.updateMember(family._id, existing._id||existing.memberId, m).catch(()=>{})
-      }
-      const r = await api.getFamily(family._id)
-      updateFamily(r.family)
-      setStep(3)
-    } catch(e) { showToast(e.message,'error') }
-    finally { setBusy(false) }
+    await saveMembersAndNext(3)
   }
 
   const submitStep3 = async () => {
@@ -332,6 +352,13 @@ export default function Setup() {
   }
 
   /* ─── RENDER ─── */
+  if (!initDone) return (
+    <div style={{minHeight:'100dvh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--cream)'}}>
+      <div style={{width:32,height:32,borderRadius:'50%',border:'3px solid var(--border)',borderTopColor:'var(--green)',animation:'rotate 0.7s linear infinite'}}/>
+      <p style={{color:'var(--text-light)',fontSize:13}}>Loading your profile…</p>
+    </div>
+  )
+
   return (
     <div className="page-shell">
 
