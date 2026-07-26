@@ -737,8 +737,8 @@ export default function Setup() {
                     <div style={{marginTop:10}}>
                       <label className="label">Other Allergies <span className="opt">(not in list — separate with commas)</span></label>
                       <input className="inp no-ico" placeholder="e.g. Mango latex, Specific spice…"
-                        value={m.customAllergies||''}
-                        onChange={e=>setMember(i,'customAllergies',e.target.value)}/>
+                        defaultValue={m.customAllergies||''}
+                        onBlur={e=>setMember(i,'customAllergies',e.target.value)}/>
                     </div>
                   </div>
 
