@@ -41,7 +41,7 @@ export default function Goals() {
 
   useEffect(()=>{
     api.getGoals().then(d=>setApiGoals(d.goals||[])).catch(()=>{})
-    api.getHealthChallenges().then(d=>setApiHC(d.challenges||[])).catch(()=>{})
+    api.getHealthConditions().then(d=>setApiHC((d.conditions||[]).map(c=>c.conditionName||c.name||'').filter(Boolean))).catch(()=>{})
     if(family?._id) {
       api.getFamily(family._id).then(d=>{
         const m = d.family?.members || []
