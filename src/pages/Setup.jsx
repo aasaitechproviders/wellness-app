@@ -175,6 +175,27 @@ const memberFromDB = (m) => ({
   dislikedFruits:    Array.isArray(m.dislikedFruits)    ? m.dislikedFruits    : [],
 })
 
+
+// Stable input component — prevents focus loss on parent re-render
+function StableInput({ value, onCommit, placeholder, className, type, max, style }) {
+  const [local, setLocal] = useState(value || '')
+  // Sync if parent value changes externally (e.g. on load)
+  const prevValue = useState(value)[0]
+  if (prevValue !== local && value !== local) setLocal(value || '')
+  return (
+    <input
+      className={className || 'inp no-ico'}
+      type={type || 'text'}
+      placeholder={placeholder}
+      max={max}
+      style={style}
+      value={local}
+      onChange={e => setLocal(e.target.value)}
+      onBlur={e => onCommit(e.target.value)}
+    />
+  )
+}
+
 export default function Setup() {
   const { family, updateFamily } = useAuth()
   const nav = useNavigate()
@@ -540,17 +561,18 @@ export default function Setup() {
                     {/* Basic info */}
                     <div className="field">
                       <label className="label">Full Name *</label>
-                      <input className="inp no-ico" placeholder="e.g. Priya"
+                      <StableInput
                         key={`name-${m.memberId}`}
-                        defaultValue={m.name}
-                        onBlur={e=>setMember(i,'name',e.target.value)}
-                        onChange={e=>e.target.value}/>
+                        value={m.name}
+                        placeholder="e.g. Priya"
+                        onCommit={v=>setMember(i,'name',v)}/>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                       <div className="field">
                         <label className="label">Date of Birth</label>
-                        <input className="inp no-ico" type="date" value={m.dob}
-                          onChange={e=>setMember(i,'dob',e.target.value)} max={new Date().toISOString().split('T')[0]}/>
+                        <StableInput key={`dob-${m.memberId}`} type="date"
+                        value={m.dob} max={new Date().toISOString().split('T')[0]}
+                        onCommit={v=>setMember(i,'dob',v)}/>
                       </div>
                       <div className="field">
                         <label className="label">Gender</label>
@@ -580,13 +602,13 @@ export default function Setup() {
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                       <div className="field">
                         <label className="label">Height (cm)</label>
-                        <input className="inp no-ico" type="number" placeholder="165" value={m.height}
-                          onChange={e=>setMember(i,'height',e.target.value)}/>
+                        <StableInput key={`h-${m.memberId}`} type="number" placeholder="165"
+                        value={m.height} onCommit={v=>setMember(i,'height',v)}/>
                       </div>
                       <div className="field">
                         <label className="label">Weight (kg)</label>
-                        <input className="inp no-ico" type="number" placeholder="60" value={m.weight}
-                          onChange={e=>setMember(i,'weight',e.target.value)}/>
+                        <StableInput key={`w-${m.memberId}`} type="number" placeholder="60"
+                        value={m.weight} onCommit={v=>setMember(i,'weight',v)}/>
                       </div>
                     </div>
                     {bmi&&bi&&(
