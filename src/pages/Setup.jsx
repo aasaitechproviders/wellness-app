@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
@@ -176,31 +176,7 @@ const memberFromDB = (m) => ({
 })
 
 
-// Stable input — local state, syncs to parent only on blur
-// useRef for the input so React never remounts it
-function StableInput({ value, onCommit, placeholder, className, type, max, style }) {
-  const [local, setLocal] = useState(value ?? '')
-  const committed = useRef(value ?? '')
-  // Only sync from parent when value changes externally (not from typing)
-  useEffect(() => {
-    if (value !== committed.current) {
-      setLocal(value ?? '')
-      committed.current = value ?? ''
-    }
-  }, [value])
-  return (
-    <input
-      className={className || 'inp no-ico'}
-      type={type || 'text'}
-      placeholder={placeholder}
-      max={max}
-      style={style}
-      value={local}
-      onChange={e => setLocal(e.target.value)}
-      onBlur={e => { committed.current = e.target.value; onCommit(e.target.value) }}
-    />
-  )
-}
+
 
 export default function Setup() {
   const { family, updateFamily } = useAuth()
@@ -567,18 +543,17 @@ export default function Setup() {
                     {/* Basic info */}
                     <div className="field">
                       <label className="label">Full Name *</label>
-                      <StableInput
-                        key={`name-${m.memberId}`}
-                        value={m.name}
-                        placeholder="e.g. Priya"
-                        onCommit={v=>setMember(i,'name',v)}/>
+                      <input className="inp no-ico" placeholder="e.g. Priya"
+                        defaultValue={m.name}
+                        onBlur={e=>setMember(i,'name',e.target.value)}/>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                       <div className="field">
                         <label className="label">Date of Birth</label>
-                        <StableInput key={`dob-${m.memberId}`} type="date"
-                        value={m.dob} max={new Date().toISOString().split('T')[0]}
-                        onCommit={v=>setMember(i,'dob',v)}/>
+                        <input className="inp no-ico" type="date"
+                        defaultValue={m.dob}
+                        max={new Date().toISOString().split('T')[0]}
+                        onBlur={e=>setMember(i,'dob',e.target.value)}/>
                       </div>
                       <div className="field">
                         <label className="label">Gender</label>
@@ -608,13 +583,15 @@ export default function Setup() {
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                       <div className="field">
                         <label className="label">Height (cm)</label>
-                        <StableInput key={`h-${m.memberId}`} type="number" placeholder="165"
-                        value={m.height} onCommit={v=>setMember(i,'height',v)}/>
+                        <input className="inp no-ico" type="number" placeholder="165"
+                        defaultValue={m.height}
+                        onBlur={e=>setMember(i,'height',e.target.value)}/>
                       </div>
                       <div className="field">
                         <label className="label">Weight (kg)</label>
-                        <StableInput key={`w-${m.memberId}`} type="number" placeholder="60"
-                        value={m.weight} onCommit={v=>setMember(i,'weight',v)}/>
+                        <input className="inp no-ico" type="number" placeholder="60"
+                        defaultValue={m.weight}
+                        onBlur={e=>setMember(i,'weight',e.target.value)}/>
                       </div>
                     </div>
                     {bmi&&bi&&(
