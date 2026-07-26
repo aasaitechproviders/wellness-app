@@ -146,6 +146,8 @@ export default function Profile() {
 
   const [goalSearch, setGoalSearch] = useState('')
   const [hcSearch,   setHcSearch]   = useState('')
+  const [frQ,         setFrQ]         = useState('')
+  const [algQ,        setAlgQ]        = useState('')
 
   const load = async () => {
     if (!family?._id) return

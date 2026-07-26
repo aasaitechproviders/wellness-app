@@ -49,7 +49,7 @@ export default function Goals() {
         const initGoals = {}, initHC = {}
         m.forEach(x => {
           initGoals[x.memberId] = (x.wellnessGoals    || []).slice(0,3)
-          initHC[x.memberId]    = (x.healthChallenges || [])
+          initHC[x.memberId]    = (x.healthConditions || x.healthChallenges || [])
         })
         setLocal(initGoals)
         setHcLocal(initHC)
@@ -74,13 +74,13 @@ export default function Goals() {
       for (const m of members) {
         await api.updateMember(family._id, m.memberId, {
           wellnessGoals:    local[m.memberId]  || [],
-          healthChallenges: hcLocal[m.memberId]|| [],
+          healthConditions: hcLocal[m.memberId]|| [],
         })
       }
       const upd = members.map(m => ({
         ...m,
         wellnessGoals:    local[m.memberId]  || [],
-        healthChallenges: hcLocal[m.memberId]|| [],
+        healthConditions: hcLocal[m.memberId]|| [],
       }))
       const withGoals = upd.filter(m => m.wellnessGoals.length)
       if (withGoals.length === 0) { showToast('Please select at least one goal','error'); return }
@@ -97,11 +97,13 @@ export default function Goals() {
   const curHC = cur ? (hcLocal[cur.memberId]|| []) : []
 
   const goalsList = apiGoals.length
-    ? apiGoals.map(g => {
-        const name = g.goalName || g.name
-        const meta = GOALS_META.find(x => x.name === name)
-        return { name, emoji: meta?.emoji || '🌿', desc: g.description || meta?.desc || '' }
-      })
+    ? apiGoals
+        .map(g => {
+          const name = g.displayName || g.goalName || g.name || ''
+          const meta = GOALS_META.find(x => x.name === name)
+          return { name, emoji: meta?.emoji || '🌿', desc: g.goalDescription || g.description || meta?.desc || '' }
+        })
+        .filter(g => g.name)
     : GOALS_META
 
   const hcList = apiHC.length ? apiHC : HC_FALLBACK
