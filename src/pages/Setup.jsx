@@ -52,6 +52,73 @@ function Stepper({ step }) {
     </div>
   )
 }
+
+/* ── Reusable SearchSelect component ── */
+function SearchSelect({ placeholder, items, selected, onAdd, onRemove, chipColor='green', maxResults=15 }) {
+  const [q, setQ] = useState('')
+  const filtered = q.trim()
+    ? items.filter(it => !selected.includes(it) && it.toLowerCase().includes(q.toLowerCase())).slice(0, maxResults)
+    : []
+  const chipStyles = {
+    green:  { bg:'var(--green)',    border:'var(--green)',   color:'#fff'          },
+    red:    { bg:'#FFF0F0',         border:'var(--red)',     color:'var(--red)'    },
+    orange: { bg:'#FFF3E0',         border:'#E65100',        color:'#E65100'       },
+  }
+  const cs = chipStyles[chipColor] || chipStyles.green
+  return (
+    <div>
+      {/* Selected chips */}
+      {selected.length>0&&(
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
+          {selected.map(s=>(
+            <span key={s} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 11px',
+              borderRadius:20,background:cs.bg,border:`1.5px solid ${cs.border}`,color:cs.color,
+              fontSize:12,fontWeight:600,lineHeight:1.3}}>
+              {s}
+              <span onClick={()=>onRemove(s)}
+                style={{cursor:'pointer',fontWeight:700,fontSize:15,lineHeight:1,marginLeft:2}}>×</span>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Search box */}
+      <div style={{position:'relative'}}>
+        <input className="inp no-ico" placeholder={placeholder} value={q}
+          onChange={e=>setQ(e.target.value)}
+          style={{paddingRight:q?36:12}}/>
+        {q&&(
+          <span onClick={()=>setQ('')}
+            style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
+              cursor:'pointer',fontSize:16,color:'var(--text-light)',lineHeight:1}}>×</span>
+        )}
+      </div>
+      {/* Dropdown results */}
+      {filtered.length>0&&(
+        <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,
+          background:'#fff',overflow:'hidden',boxShadow:'0 4px 12px rgba(0,0,0,0.08)'}}>
+          {filtered.map(it=>(
+            <div key={it} onClick={()=>{onAdd(it);setQ('')}}
+              style={{padding:'10px 14px',fontSize:13,cursor:'pointer',
+                borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:8}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+              onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+              <span style={{color:'var(--green)',fontWeight:700,fontSize:14}}>+</span> {it}
+            </div>
+          ))}
+        </div>
+      )}
+      {q&&filtered.length===0&&(
+        <div style={{fontSize:12,color:'var(--text-light)',marginTop:6,paddingLeft:4}}>No matches found</div>
+      )}
+      {!q&&selected.length===0&&(
+        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,paddingLeft:4}}>
+          Type to search and select
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SecH({ emoji, title }) {
   return <div className="sec-hd"><span className="sec-hd-icon">{emoji}</span><span className="sec-hd-title">{title}</span></div>
 }
@@ -119,10 +186,14 @@ export default function Setup() {
     return [blankMember()]
   })
 
-  /* ── Search states for step 2 fields ── */
-  const [hcSearch,   setHcSearch]   = useState({})   // { memberIdx: '' }
-  const [frSearch,   setFrSearch]   = useState({})   // { memberIdx: '' }
-  const [algSearch,  setAlgSearch]  = useState({})   // { memberIdx: '' }
+  /* ── Search states ── */
+  const [hcSearch,   setHcSearch]   = useState({})
+  const [frSearch,   setFrSearch]   = useState({})
+  const [algSearch,  setAlgSearch]  = useState({})
+  const [vegLikeQ,   setVegLikeQ]   = useState('')
+  const [vegDislikeQ,setVegDislikeQ]= useState('')
+  const [fruitLikeQ, setFruitLikeQ] = useState('')
+  const [fruitDislikeQ,setFruitDislikeQ]= useState('')
 
   /* ── Step 3 — Food Preferences ── */
   const [dietType,      setDietType]     = useState(family?.dietPreference || '')
@@ -704,71 +775,47 @@ export default function Setup() {
 
             {/* Liked Vegetables */}
             <SecH emoji="🥦" title="Vegetables You Like"/>
-            <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-              {vegetables.map(v=>{
-                const sel=likedVeg.includes(v.name)
-                return(
-                  <button key={v._id} type="button"
-                    onClick={()=>setLikedVeg(prev=>sel?prev.filter(x=>x!==v.name):[...prev,v.name])}
-                    style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
-                      border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`,
-                      background:sel?'var(--green)':'#fff',color:sel?'#fff':'var(--text-mid)'}}>
-                    {sel?'✓ ':''}{v.name}
-                  </button>
-                )
-              })}
-            </div>
+            <SearchSelect
+              placeholder="Search vegetables…"
+              items={vegetables.map(v=>v.name)}
+              selected={likedVeg}
+              onAdd={v=>setLikedVeg(prev=>[...prev,v])}
+              onRemove={v=>setLikedVeg(prev=>prev.filter(x=>x!==v))}
+              chipColor="green"
+            />
 
             {/* Disliked Vegetables */}
             <SecH emoji="🚫" title="Vegetables You Dislike"/>
-            <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-              {vegetables.map(v=>{
-                const sel=dislikedVeg.includes(v.name)
-                return(
-                  <button key={v._id} type="button"
-                    onClick={()=>setDislikedVeg(prev=>sel?prev.filter(x=>x!==v.name):[...prev,v.name])}
-                    style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
-                      border:`1.5px solid ${sel?'var(--red)':'var(--border)'}`,
-                      background:sel?'#FFF0F0':'#fff',color:sel?'var(--red)':'var(--text-mid)'}}>
-                    {sel?'✕ ':''}{v.name}
-                  </button>
-                )
-              })}
-            </div>
+            <SearchSelect
+              placeholder="Search vegetables…"
+              items={vegetables.map(v=>v.name)}
+              selected={dislikedVeg}
+              onAdd={v=>setDislikedVeg(prev=>[...prev,v])}
+              onRemove={v=>setDislikedVeg(prev=>prev.filter(x=>x!==v))}
+              chipColor="red"
+            />
 
             {/* Liked Fruits */}
             <SecH emoji="🍎" title="Fruits You Like"/>
-            <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-              {fruits.map(f=>{
-                const sel=likedFruits.includes(f.name)
-                return(
-                  <button key={f._id} type="button"
-                    onClick={()=>setLikedFruits(prev=>sel?prev.filter(x=>x!==f.name):[...prev,f.name])}
-                    style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
-                      border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`,
-                      background:sel?'var(--green)':'#fff',color:sel?'#fff':'var(--text-mid)'}}>
-                    {sel?'✓ ':''}{f.name}
-                  </button>
-                )
-              })}
-            </div>
+            <SearchSelect
+              placeholder="Search fruits…"
+              items={fruits.map(f=>f.name)}
+              selected={likedFruits}
+              onAdd={v=>setLikedFruits(prev=>[...prev,v])}
+              onRemove={v=>setLikedFruits(prev=>prev.filter(x=>x!==v))}
+              chipColor="green"
+            />
 
             {/* Disliked Fruits */}
             <SecH emoji="🚫" title="Fruits You Dislike"/>
-            <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-              {fruits.map(f=>{
-                const sel=dislikedFruits.includes(f.name)
-                return(
-                  <button key={f._id} type="button"
-                    onClick={()=>setDislikedFruits(prev=>sel?prev.filter(x=>x!==f.name):[...prev,f.name])}
-                    style={{padding:'6px 12px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
-                      border:`1.5px solid ${sel?'var(--red)':'var(--border)'}`,
-                      background:sel?'#FFF0F0':'#fff',color:sel?'var(--red)':'var(--text-mid)'}}>
-                    {sel?'✕ ':''}{f.name}
-                  </button>
-                )
-              })}
-            </div>
+            <SearchSelect
+              placeholder="Search fruits…"
+              items={fruits.map(f=>f.name)}
+              selected={dislikedFruits}
+              onAdd={v=>setDislikedFruits(prev=>[...prev,v])}
+              onRemove={v=>setDislikedFruits(prev=>prev.filter(x=>x!==v))}
+              chipColor="red"
+            />
 
           </div>
         )}
