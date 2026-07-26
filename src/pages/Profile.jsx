@@ -267,7 +267,7 @@ export default function Profile() {
       name:                m.name || '',
       relationship:        m.relationship || 'Self',
       dob:                 m.dob ? (m.dob.includes('T') ? m.dob.split('T')[0] : m.dob) : '',
-      ageRaw:              m.age ? String(m.age) : '',
+      ageRaw:              ageFromDob(m.dob) ? String(ageFromDob(m.dob)) : (m.age ? String(m.age) : ''),
       gender:              m.gender || 'Female',
       height:              m.height ? String(m.height) : '',
       weight:              m.weight ? String(m.weight) : '',
@@ -291,7 +291,7 @@ export default function Profile() {
       _fruitRestr:      (m.dislikedFruit||[]).length > 0,
     })
     setEditSection(m.memberId)
-    setGoalSearch(''); setHcSearch('')
+    setGoalSearch(''); setHcSearch(''); setFrQ(''); setAlgQ('')
   }
 
   // ── Start adding a new member ──
@@ -325,7 +325,7 @@ export default function Profile() {
       _fruitRestr:      false,
     })
     setEditSection('new')
-    setGoalSearch(''); setHcSearch('')
+    setGoalSearch(''); setHcSearch(''); setFrQ(''); setAlgQ('')
   }
 
   // ── Save member ──
@@ -512,23 +512,44 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Wellness Goals — DB driven */}
+      {/* Wellness Goals */}
       <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>
           Wellness Goals <span style={{ color:'var(--text-light)',fontWeight:400,fontSize:10 }}>(up to 3)</span>
         </div>
-        <input className="inp no-ico" placeholder="Search goals…" value={goalSearch} onChange={e=>setGoalSearch(e.target.value)} style={{ marginBottom:8,fontSize:12 }} />
-        <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-          {goalsList.filter(g=>g.name && g.name.toLowerCase().includes(goalSearch.toLowerCase())).map(g=>{
-            const on=(me.wellnessGoals||[]).includes(g.name)
-            return (
-              <button key={g.name} onClick={()=>toggleGoal(g.name)}
-                style={{ padding:'5px 12px',borderRadius:20,border:`1.5px solid ${on?'var(--green)':'var(--border)'}`,background:on?'var(--green)':'var(--white)',color:on?'#fff':'var(--text-mid)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-                {g.emoji} {g.name} {on&&'✓'}
-              </button>
-            )
-          })}
-        </div>
+        <input className="inp no-ico" placeholder="Search goals…" value={goalSearch} onChange={e=>setGoalSearch(e.target.value)} style={{fontSize:12}}/>
+        {goalSearch.trim() && (
+          <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,background:'#fff',maxHeight:180,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.08)'}}>
+            {goalsList
+              .filter(g=>g.name && g.name.toLowerCase().includes(goalSearch.toLowerCase()) && !(me.wellnessGoals||[]).includes(g.name))
+              .map(g=>(
+                <div key={g.name} onClick={()=>{toggleGoal(g.name);setGoalSearch('')}}
+                  style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:8}}
+                  onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+                  onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+                  <span style={{fontWeight:700,color:'var(--green)'}}>+</span> {g.emoji} {g.name}
+                </div>
+              ))
+            }
+            {goalsList.filter(g=>g.name&&g.name.toLowerCase().includes(goalSearch.toLowerCase())&&!(me.wellnessGoals||[]).includes(g.name)).length===0&&(
+              <div style={{padding:'10px 14px',fontSize:12,color:'var(--text-light)'}}>No matching goals</div>
+            )}
+          </div>
+        )}
+        {!goalSearch.trim()&&!(me.wellnessGoals||[]).length&&(
+          <div style={{fontSize:11,color:'var(--text-light)',marginTop:5}}>Type to search and select (max 3)</div>
+        )}
+        {(me.wellnessGoals||[]).length>0&&(
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+            {(me.wellnessGoals||[]).map(g=>(
+              <span key={g} onClick={()=>toggleGoal(g)}
+                style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,
+                  background:'var(--green)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                {GOAL_EMOJI[g]||'🌿'} {g} ×
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Health Challenges — search-only reveal */}
@@ -564,15 +585,14 @@ export default function Profile() {
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5 }}>
           Food Restrictions <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(items you avoid)</span>
         </div>
-        <input className="inp no-ico" placeholder="Search foods to restrict…" value={me._frQ||''}
-          onChange={e=>setMe(p=>({...p,_frQ:e.target.value}))} style={{fontSize:12}}/>
-        {(me._frQ||'').trim() && (
+        <input className="inp no-ico" placeholder="Search foods to restrict…" value={frQ} onChange={e=>setFrQ(e.target.value)} style={{fontSize:12}}/>
+        {frQ.trim() && (
           <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,background:'#fff',maxHeight:160,overflowY:'auto'}}>
             {productList
-              .filter(p=>p.name && p.name.toLowerCase().includes((me._frQ||'').toLowerCase()) && !(me.foodRestrictions||[]).includes(p.name))
+              .filter(p=>p.name && p.name.toLowerCase().includes(frQ.toLowerCase()) && !(me.foodRestrictions||[]).includes(p.name))
               .slice(0,15)
               .map(p=>(
-                <div key={p._id} onClick={()=>setMe(prev=>({...prev,foodRestrictions:[...(prev.foodRestrictions||[]),p.name],_frQ:''}))}
+                <div key={p._id} onClick={()=>{setMe(prev=>({...prev,foodRestrictions:[...(prev.foodRestrictions||[]),p.name]}));setFrQ('')}}
                   style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)',display:'flex',gap:8,alignItems:'center'}}
                   onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
                   onMouseOut={e=>e.currentTarget.style.background='#fff'}>
@@ -590,14 +610,13 @@ export default function Profile() {
       {/* Allergies */}
       <div style={{ marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>Allergies</div>
-        <input className="inp no-ico" placeholder="Search allergies…" value={me._algQ||''}
-          onChange={e=>setMe(p=>({...p,_algQ:e.target.value}))} style={{fontSize:12,marginBottom:4}}/>
-        {(me._algQ||'').trim() && (
+        <input className="inp no-ico" placeholder="Search allergies…" value={algQ} onChange={e=>setAlgQ(e.target.value)} style={{fontSize:12,marginBottom:4}}/>
+        {algQ.trim() && (
           <div style={{border:'1.5px solid var(--border)',borderRadius:10,background:'#fff',maxHeight:140,overflowY:'auto'}}>
             {allergyList
-              .filter(a=>a.name && a.name.toLowerCase().includes((me._algQ||'').toLowerCase()) && !(me.allergies||[]).includes(a.name))
+              .filter(a=>a.name && a.name.toLowerCase().includes(algQ.toLowerCase()) && !(me.allergies||[]).includes(a.name))
               .map(a=>(
-                <div key={a._id} onClick={()=>setMe(p=>({...p,allergies:[...(p.allergies||[]),a.name],_algQ:''}))}
+                <div key={a._id} onClick={()=>{setMe(p=>({...p,allergies:[...(p.allergies||[]),a.name]}));setAlgQ('')}}
                   style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)'}}
                   onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
                   onMouseOut={e=>e.currentTarget.style.background='#fff'}>

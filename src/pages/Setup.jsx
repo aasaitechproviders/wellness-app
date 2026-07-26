@@ -204,7 +204,6 @@ export default function Setup() {
     deliveryPreference:'Morning',
   })
   const [members,        setMembers]       = useState([blankMember()])
-  const [dietType, setDietType] = useState('')
 
   const populateFromFamily = (f) => {
     setForm0({
@@ -222,7 +221,6 @@ export default function Setup() {
       deliveryPreference: f.deliveryPreference || 'Morning',
     })
     if (f.members?.length) setMembers(f.members.map(memberFromDB))
-    setDietType(f.dietPreference || '')
   }
 
   /* ── Fetch fresh family + all dropdown data on mount ── */
@@ -328,8 +326,8 @@ export default function Setup() {
         // Match by memberId, fallback name
         const existing = existingMembers.find(e=>e.memberId===m.memberId)
                       || existingMembers.find(e=>e.name===m.name)
-        if(existing?._id) {
-          await api.updateMember(family._id, existing._id, clean).catch(()=>{})
+        if(existing?.memberId) {
+          await api.updateMember(family._id, existing.memberId, clean).catch(()=>{})
         } else {
           await api.addMember(family._id, clean).catch(()=>{})
         }
@@ -355,7 +353,7 @@ export default function Setup() {
     setBusy(true)
     try {
       // Save diet preference at family level
-      await api.updateFamily(family._id, { dietPreference: dietType, setupComplete: true })
+      await api.updateFamily(family._id, { setupComplete: true })
       // Save liked/disliked veg+fruits per member
       const latestFamily = await api.getFamily(family._id).then(d=>d.family).catch(()=>family)
       const existingMembers = latestFamily?.members || []
@@ -366,8 +364,8 @@ export default function Setup() {
         }
         const existing = existingMembers.find(e=>e.memberId===m.memberId)
                       || existingMembers.find(e=>e.name===m.name)
-        if(existing?._id) {
-          await api.updateMember(family._id, existing._id, clean).catch(()=>{})
+        if(existing?.memberId) {
+          await api.updateMember(family._id, existing.memberId, clean).catch(()=>{})
         } else {
           await api.addMember(family._id, clean).catch(()=>{})
         }
@@ -797,25 +795,32 @@ export default function Setup() {
               )
             })}
 
-            {/* Diet Type — family level */}
-            <div>
-              <SecH emoji="🍽️" title="Diet Type"/>
-              <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8}}>
-                {DIET_TYPES.map(d=>(
-                  <button key={d.id} type="button" onClick={()=>setDietType(d.id)}
-                    style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px',borderRadius:14,
-                      border:`2px solid ${dietType===d.id?'var(--green)':'var(--border)'}`,
-                      background:dietType===d.id?'var(--green-pale)':'#fff',cursor:'pointer',textAlign:'left'}}>
-                    <span style={{fontSize:26}}>{d.emoji}</span>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:14,color:dietType===d.id?'var(--green)':'var(--text)'}}>{d.id}</div>
-                      <div style={{fontSize:12,color:'var(--text-light)',marginTop:1}}>{d.desc}</div>
-                    </div>
-                    {dietType===d.id&&<span style={{marginLeft:'auto',color:'var(--green)',fontSize:20}}>✓</span>}
-                  </button>
-                ))}
+            {/* Diet Type — per member */}
+            {members.map((m,i)=>(
+              <div key={`diet-${m.memberId}`} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
+                <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
+                  <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
+                    {m.name?initials(m.name):(i+1)}
+                  </div>
+                  <div style={{fontWeight:700,fontSize:14,color:'var(--green)'}}>{m.name||`Member ${i+1}`} — Diet Type</div>
+                </div>
+                <div style={{padding:'12px 16px',display:'flex',flexDirection:'column',gap:8}}>
+                  {DIET_TYPES.map(d=>(
+                    <button key={d.id} type="button" onClick={()=>setMember(i,'dietType',d.id)}
+                      style={{display:'flex',alignItems:'center',gap:14,padding:'12px 14px',borderRadius:12,
+                        border:`2px solid ${m.dietType===d.id?'var(--green)':'var(--border)'}`,
+                        background:m.dietType===d.id?'var(--green-pale)':'#fff',cursor:'pointer',textAlign:'left'}}>
+                      <span style={{fontSize:22}}>{d.emoji}</span>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:m.dietType===d.id?'var(--green)':'var(--text)'}}>{d.id}</div>
+                        <div style={{fontSize:11,color:'var(--text-light)',marginTop:1}}>{d.desc}</div>
+                      </div>
+                      {m.dietType===d.id&&<span style={{marginLeft:'auto',color:'var(--green)',fontSize:18}}>✓</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ))}
 
 
 
