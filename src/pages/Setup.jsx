@@ -140,6 +140,10 @@ const blankMember = () => ({
   foodRestrictions:[],
   allergies:       [],
   customAllergies: '',
+  likedVegetables: [],
+  dislikedVegetables: [],
+  likedFruits: [],
+  dislikedFruits: [],
 })
 
 // Convert any date value to YYYY-MM-DD for <input type="date">
@@ -166,6 +170,10 @@ const memberFromDB = (m) => ({
   customAllergies: Array.isArray(m.customAllergies)
     ? m.customAllergies.join(', ')
     : (m.customAllergies || ''),
+  likedVegetables:   Array.isArray(m.likedVegetables)   ? m.likedVegetables   : [],
+  dislikedVegetables:Array.isArray(m.dislikedVegetables) ? m.dislikedVegetables : [],
+  likedFruits:       Array.isArray(m.likedFruits)       ? m.likedFruits       : [],
+  dislikedFruits:    Array.isArray(m.dislikedFruits)    ? m.dislikedFruits    : [],
 })
 
 export default function Setup() {
@@ -194,11 +202,7 @@ export default function Setup() {
     tower:''       , flat:''      , landmark:'', pincode:'',
   })
   const [members,        setMembers]       = useState([blankMember()])
-  const [dietType,       setDietType]      = useState('')
-  const [likedVeg,       setLikedVeg]      = useState([])
-  const [dislikedVeg,    setDislikedVeg]   = useState([])
-  const [likedFruits,    setLikedFruits]   = useState([])
-  const [dislikedFruits, setDislikedFruits]= useState([])
+  const [dietType, setDietType] = useState('')
 
   const populateFromFamily = (f) => {
     setForm0({
@@ -215,11 +219,7 @@ export default function Setup() {
       pincode:      f.pincode       || '',
     })
     if (f.members?.length) setMembers(f.members.map(memberFromDB))
-    setDietType(f.dietPreference   || '')
-    setLikedVeg(f.likedVegetables  || [])
-    setDislikedVeg(f.dislikedVegetables || [])
-    setLikedFruits(f.likedFruits   || [])
-    setDislikedFruits(f.dislikedFruits || [])
+    setDietType(f.dietPreference || '')
   }
 
   /* ── Fetch fresh family + all dropdown data on mount ── */
@@ -337,14 +337,25 @@ export default function Setup() {
     if(!dietType) return showToast('Select a diet type','error')
     setBusy(true)
     try {
-      const r = await api.updateFamily(family._id, {
-        dietPreference:      dietType,
-        likedVegetables:     likedVeg,
-        dislikedVegetables:  dislikedVeg,
-        likedFruits,
-        dislikedFruits,
-        setupComplete: true,
-      })
+      // Save diet preference at family level
+      await api.updateFamily(family._id, { dietPreference: dietType, setupComplete: true })
+      // Save liked/disliked veg+fruits per member
+      const latestFamily = await api.getFamily(family._id).then(d=>d.family).catch(()=>family)
+      const existingMembers = latestFamily?.members || []
+      for(const m of members) {
+        const clean = {
+          ...m,
+          customAllergies: (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
+        }
+        const existing = existingMembers.find(e=>e.memberId===m.memberId)
+                      || existingMembers.find(e=>e.name===m.name)
+        if(existing?._id) {
+          await api.updateMember(family._id, existing._id, clean).catch(()=>{})
+        } else {
+          await api.addMember(family._id, clean).catch(()=>{})
+        }
+      }
+      const r = await api.getFamily(family._id)
       updateFamily(r.family)
       nav('/home')
     } catch(e) { showToast(e.message,'error') }
@@ -692,71 +703,93 @@ export default function Setup() {
         )}
 
         {/* ════════════════════════════════════════
-            STEP 3 — Food Preferences
+            STEP 3 — Food Preferences (per member)
         ════════════════════════════════════════ */}
         {step===3&&(
-          <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:20}}>
 
-            <SecH emoji="🍽️" title="Diet Type"/>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {DIET_TYPES.map(d=>(
-                <button key={d.id} type="button" onClick={()=>setDietType(d.id)}
-                  style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px',borderRadius:14,
-                    border:`2px solid ${dietType===d.id?'var(--green)':'var(--border)'}`,
-                    background:dietType===d.id?'var(--green-pale)':'#fff',cursor:'pointer',textAlign:'left'}}>
-                  <span style={{fontSize:26}}>{d.emoji}</span>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:14,color:dietType===d.id?'var(--green)':'var(--text)'}}>{d.id}</div>
-                    <div style={{fontSize:12,color:'var(--text-light)',marginTop:1}}>{d.desc}</div>
-                  </div>
-                  {dietType===d.id&&<span style={{marginLeft:'auto',color:'var(--green)',fontSize:20}}>✓</span>}
-                </button>
-              ))}
+            {/* Diet Type — family level */}
+            <div>
+              <SecH emoji="🍽️" title="Diet Type"/>
+              <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8}}>
+                {DIET_TYPES.map(d=>(
+                  <button key={d.id} type="button" onClick={()=>setDietType(d.id)}
+                    style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px',borderRadius:14,
+                      border:`2px solid ${dietType===d.id?'var(--green)':'var(--border)'}`,
+                      background:dietType===d.id?'var(--green-pale)':'#fff',cursor:'pointer',textAlign:'left'}}>
+                    <span style={{fontSize:26}}>{d.emoji}</span>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14,color:dietType===d.id?'var(--green)':'var(--text)'}}>{d.id}</div>
+                      <div style={{fontSize:12,color:'var(--text-light)',marginTop:1}}>{d.desc}</div>
+                    </div>
+                    {dietType===d.id&&<span style={{marginLeft:'auto',color:'var(--green)',fontSize:20}}>✓</span>}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Liked Vegetables */}
-            <SecH emoji="🥦" title="Vegetables You Like"/>
-            <SearchSelect
-              placeholder="Search vegetables…"
-              items={vegetables.map(v=>v.name)}
-              selected={likedVeg}
-              onAdd={v=>setLikedVeg(prev=>[...prev,v])}
-              onRemove={v=>setLikedVeg(prev=>prev.filter(x=>x!==v))}
-              chipColor="green"
-            />
+            {/* Per-member food preferences */}
+            {members.map((m,i)=>(
+              <div key={m.memberId} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
+                <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
+                  <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
+                    {m.name?initials(m.name):(i+1)}
+                  </div>
+                  <div style={{fontWeight:700,fontSize:14,color:'var(--green)'}}>{m.name||`Member ${i+1}`}</div>
+                </div>
+                <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:14}}>
 
-            {/* Disliked Vegetables */}
-            <SecH emoji="🚫" title="Vegetables You Dislike"/>
-            <SearchSelect
-              placeholder="Search vegetables…"
-              items={vegetables.map(v=>v.name)}
-              selected={dislikedVeg}
-              onAdd={v=>setDislikedVeg(prev=>[...prev,v])}
-              onRemove={v=>setDislikedVeg(prev=>prev.filter(x=>x!==v))}
-              chipColor="red"
-            />
+                  <div className="field">
+                    <label className="label">🥦 Vegetables You Like</label>
+                    <SearchSelect
+                      placeholder="Search vegetables…"
+                      items={vegetables.map(v=>v.name)}
+                      selected={m.likedVegetables||[]}
+                      onAdd={v=>setMember(i,'likedVegetables',[...(m.likedVegetables||[]),v])}
+                      onRemove={v=>setMember(i,'likedVegetables',(m.likedVegetables||[]).filter(x=>x!==v))}
+                      chipColor="green"
+                    />
+                  </div>
 
-            {/* Liked Fruits */}
-            <SecH emoji="🍎" title="Fruits You Like"/>
-            <SearchSelect
-              placeholder="Search fruits…"
-              items={fruits.map(f=>f.name)}
-              selected={likedFruits}
-              onAdd={v=>setLikedFruits(prev=>[...prev,v])}
-              onRemove={v=>setLikedFruits(prev=>prev.filter(x=>x!==v))}
-              chipColor="green"
-            />
+                  <div className="field">
+                    <label className="label">🚫 Vegetables You Dislike</label>
+                    <SearchSelect
+                      placeholder="Search vegetables…"
+                      items={vegetables.map(v=>v.name)}
+                      selected={m.dislikedVegetables||[]}
+                      onAdd={v=>setMember(i,'dislikedVegetables',[...(m.dislikedVegetables||[]),v])}
+                      onRemove={v=>setMember(i,'dislikedVegetables',(m.dislikedVegetables||[]).filter(x=>x!==v))}
+                      chipColor="red"
+                    />
+                  </div>
 
-            {/* Disliked Fruits */}
-            <SecH emoji="🚫" title="Fruits You Dislike"/>
-            <SearchSelect
-              placeholder="Search fruits…"
-              items={fruits.map(f=>f.name)}
-              selected={dislikedFruits}
-              onAdd={v=>setDislikedFruits(prev=>[...prev,v])}
-              onRemove={v=>setDislikedFruits(prev=>prev.filter(x=>x!==v))}
-              chipColor="red"
-            />
+                  <div className="field">
+                    <label className="label">🍎 Fruits You Like</label>
+                    <SearchSelect
+                      placeholder="Search fruits…"
+                      items={fruits.map(f=>f.name)}
+                      selected={m.likedFruits||[]}
+                      onAdd={v=>setMember(i,'likedFruits',[...(m.likedFruits||[]),v])}
+                      onRemove={v=>setMember(i,'likedFruits',(m.likedFruits||[]).filter(x=>x!==v))}
+                      chipColor="green"
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label className="label">🚫 Fruits You Dislike</label>
+                    <SearchSelect
+                      placeholder="Search fruits…"
+                      items={fruits.map(f=>f.name)}
+                      selected={m.dislikedFruits||[]}
+                      onAdd={v=>setMember(i,'dislikedFruits',[...(m.dislikedFruits||[]),v])}
+                      onRemove={v=>setMember(i,'dislikedFruits',(m.dislikedFruits||[]).filter(x=>x!==v))}
+                      chipColor="red"
+                    />
+                  </div>
+
+                </div>
+              </div>
+            ))}
 
           </div>
         )}

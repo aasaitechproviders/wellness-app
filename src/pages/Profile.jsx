@@ -57,6 +57,56 @@ const Tag = ({ label, icon }) => (
   </span>
 )
 
+
+// Simple inline search for family edit form
+
+function MemberSearch({ placeholder, items, selected, onAdd }) {
+  const [q, setQ] = React.useState('')
+  const filtered = q.trim() ? items.filter(it=>it && !selected.includes(it)&&it.toLowerCase().includes(q.toLowerCase())).slice(0,12) : []
+  return (
+    <div>
+      <input className="inp no-ico" placeholder={placeholder} value={q}
+        onChange={e=>setQ(e.target.value)} style={{fontSize:12}}/>
+      {filtered.length>0&&(
+        <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:3,background:'#fff',maxHeight:150,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.08)'}}>
+          {filtered.map(it=>(
+            <div key={it} onClick={()=>{onAdd(it);setQ('')}}
+              style={{padding:'8px 12px',fontSize:12,cursor:'pointer',borderBottom:'1px solid var(--border)'}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+              onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+              + {it}
+            </div>
+          ))}
+        </div>
+      )}
+      {!q&&selected.length===0&&<div style={{fontSize:11,color:'var(--text-light)',marginTop:4}}>Type to search and select</div>}
+    </div>
+  )
+}
+
+function FamilySearch({ placeholder, items, selected, onAdd }) {
+  const [q, setQ] = React.useState('')
+  const filtered = q.trim() ? items.filter(it=>!selected.includes(it)&&it.toLowerCase().includes(q.toLowerCase())).slice(0,12) : []
+  return (
+    <div style={{position:'relative'}}>
+      <input className="inp no-ico" placeholder={placeholder} value={q}
+        onChange={e=>setQ(e.target.value)} style={{fontSize:12}}/>
+      {filtered.length>0&&(
+        <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:3,background:'#fff',maxHeight:150,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.08)'}}>
+          {filtered.map(it=>(
+            <div key={it} onClick={()=>{onAdd(it);setQ('')}}
+              style={{padding:'8px 12px',fontSize:12,cursor:'pointer',borderBottom:'1px solid var(--border)'}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
+              onMouseOut={e=>e.currentTarget.style.background='#fff'}>
+              + {it}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const SCard = ({ children, style }) => (
   <div style={{ background:'var(--white)',borderRadius:14,border:'1px solid var(--border)',padding:'14px 16px 88px',marginBottom:12,...style }}>
     {children}
@@ -207,6 +257,7 @@ export default function Profile() {
       memberId:            m.memberId,
       name:                m.name || '',
       relationship:        m.relationship || 'Self',
+      dob:                 m.dob ? (m.dob.includes('T') ? m.dob.split('T')[0] : m.dob) : '',
       ageRaw:              m.age ? String(m.age) : '',
       gender:              m.gender || 'Female',
       height:              m.height ? String(m.height) : '',
@@ -220,8 +271,10 @@ export default function Profile() {
       foodRestrictions: [...(m.foodRestrictions || [])],
       allergies:        [...(m.allergies        || m.dietaryRestrictions || [])],
       customAllergies:  Array.isArray(m.customAllergies) ? m.customAllergies.join(', ') : (m.customAllergies||''),
-      dislikedVeg:      [...(m.dislikedVeg      || [])],
-      dislikedFruit:    [...(m.dislikedFruit    || [])],
+      likedVegetables:   [...(m.likedVegetables   || [])],
+      dislikedVegetables:[...(m.dislikedVegetables || m.dislikedVeg || [])],
+      likedFruits:       [...(m.likedFruits       || [])],
+      dislikedFruits:    [...(m.dislikedFruits    || m.dislikedFruit || [])],
       preferredPlan:    m.preferredPlan   || '',
       _vegQ:            '',
       _fruitQ:          '',
@@ -238,6 +291,7 @@ export default function Profile() {
       memberId:            'new',
       name:                '',
       relationship:        'Self',
+      dob:                 '',
       ageRaw:              '',
       gender:              'Female',
       height:              '',
@@ -251,8 +305,10 @@ export default function Profile() {
       foodRestrictions: [],
       allergies:        [],
       customAllergies:  '',
-      dislikedVeg:      [],
-      dislikedFruit:    [],
+      likedVegetables:   [],
+      dislikedVegetables:[],
+      likedFruits:       [],
+      dislikedFruits:    [],
       preferredPlan:    '',
       _vegQ:            '',
       _fruitQ:          '',
@@ -271,6 +327,7 @@ export default function Profile() {
       const payload = {
         name:                me.name,
         relationship:        me.relationship,
+        dob:                 me.dob || null,
         age:                 me.ageRaw ? parseInt(me.ageRaw) : null,
         gender:              me.gender,
         height:              me.height ? parseFloat(me.height) : null,
@@ -284,8 +341,10 @@ export default function Profile() {
         foodRestrictions: me.foodRestrictions,
         allergies:        me.allergies,
         customAllergies:  (me.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean),
-        dislikedVeg:      me.dislikedVeg,
-        dislikedFruit:    me.dislikedFruit,
+        likedVegetables:   me.likedVegetables   || [],
+        dislikedVegetables:me.dislikedVegetables || [],
+        likedFruits:       me.likedFruits       || [],
+        dislikedFruits:    me.dislikedFruits    || [],
         preferredPlan:    me.preferredPlan || null,
       }
       if (me.memberId === 'new') {
@@ -350,11 +409,16 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Name + Age */}
+      {/* Name */}
+      <div style={{ marginBottom:10 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Full Name *</div>
+        <input className="inp no-ico" placeholder="e.g. Priya" value={me.name||''} onChange={e=>setMe(p=>({...p,name:e.target.value}))} />
+      </div>
+      {/* DOB + Age */}
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
         <div>
-          <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Full Name *</div>
-          <input className="inp no-ico" placeholder="e.g. Priya" value={me.name||''} onChange={e=>setMe(p=>({...p,name:e.target.value}))} />
+          <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Date of Birth</div>
+          <input className="inp no-ico" type="date" value={me.dob||''} max={new Date().toISOString().split('T')[0]} onChange={e=>setMe(p=>({...p,dob:e.target.value}))} />
         </div>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Age</div>
@@ -516,84 +580,64 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Disliked Vegetables */}
+      {/* Liked Vegetables */}
       <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>
-          Disliked Vegetables <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(optional)</span>
-        </div>
-        <div style={{ display:'flex',gap:8,marginBottom:10 }}>
-          {[{v:false,l:'No restrictions'},{v:true,l:'Yes, I have restrictions'}].map(o=>(
-            <button key={String(o.v)} onClick={()=>setMe(p=>({...p,_vegRestr:o.v,...(!o.v?{dislikedVeg:[],_vegQ:''}:{})}))}
-              style={{ flex:1,padding:'8px 6px',borderRadius:8,fontSize:11,fontWeight:600,cursor:'pointer',border:`1.5px solid ${me._vegRestr===o.v?'var(--green)':'var(--border)'}`,background:me._vegRestr===o.v?'var(--green-pale)':'var(--white)',color:me._vegRestr===o.v?'var(--green)':'var(--text-mid)' }}>
-              {me._vegRestr===o.v?'✅ ':''}{o.l}
-            </button>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🥦 Vegetables You Like</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
+          {(me.likedVegetables||[]).map(v=>(
+            <span key={v} onClick={()=>setMe(p=>({...p,likedVegetables:(p.likedVegetables||[]).filter(x=>x!==v)}))}
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'var(--green)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>
+              {v} ×</span>
           ))}
         </div>
-        {me._vegRestr && (
-          <>
-            <input className="inp no-ico" placeholder="Search vegetables to exclude…" value={me._vegQ||''} onChange={e=>setMe(p=>({...p,_vegQ:e.target.value}))} style={{ marginBottom:8,fontSize:12 }} />
-            <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-              {(me.dislikedVeg||[]).map(v=>(
-                <button key={v} onClick={()=>setMe(p=>({...p,dislikedVeg:(p.dislikedVeg||[]).filter(x=>x!==v)}))}
-                  style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-                  {v} <span style={{fontWeight:700}}>×</span>
-                </button>
-              ))}
-              {(me._vegQ||'').trim() && VEGETABLES_LIST
-                .filter(v=>v && v.toLowerCase().includes((me._vegQ||'').toLowerCase())&&!(me.dislikedVeg||[]).includes(v))
-                .map(v=>(
-                  <button key={v} onClick={()=>setMe(p=>({...p,dislikedVeg:[...(p.dislikedVeg||[]),v],_vegQ:''}))}
-                    style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
-                    + {v}
-                  </button>
-                ))
-              }
-              {!(me._vegQ||'').trim() && !(me.dislikedVeg||[]).length && (
-                <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
-              )}
-            </div>
-          </>
-        )}
+        <MemberSearch placeholder="Search vegetables…"
+          items={VEGETABLES_LIST} selected={me.likedVegetables||[]}
+          onAdd={v=>setMe(p=>({...p,likedVegetables:[...(p.likedVegetables||[]),v]}))}/>
+      </div>
+
+      {/* Disliked Vegetables */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🚫 Vegetables You Dislike</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
+          {(me.dislikedVegetables||[]).map(v=>(
+            <span key={v} onClick={()=>setMe(p=>({...p,dislikedVegetables:(p.dislikedVegetables||[]).filter(x=>x!==v)}))}
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
+              {v} ×</span>
+          ))}
+        </div>
+        <MemberSearch placeholder="Search vegetables…"
+          items={VEGETABLES_LIST} selected={me.dislikedVegetables||[]}
+          onAdd={v=>setMe(p=>({...p,dislikedVegetables:[...(p.dislikedVegetables||[]),v]}))}/>
+      </div>
+
+      {/* Liked Fruits */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🍎 Fruits You Like</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
+          {(me.likedFruits||[]).map(f=>(
+            <span key={f} onClick={()=>setMe(p=>({...p,likedFruits:(p.likedFruits||[]).filter(x=>x!==f)}))}
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'var(--green)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>
+              {f} ×</span>
+          ))}
+        </div>
+        <MemberSearch placeholder="Search fruits…"
+          items={FRUITS_LIST} selected={me.likedFruits||[]}
+          onAdd={v=>setMe(p=>({...p,likedFruits:[...(p.likedFruits||[]),v]}))}/>
       </div>
 
       {/* Disliked Fruits */}
       <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:7,textTransform:'uppercase',letterSpacing:0.5 }}>
-          Disliked Fruits <span style={{ fontWeight:400,color:'var(--text-light)',fontSize:10 }}>(optional)</span>
-        </div>
-        <div style={{ display:'flex',gap:8,marginBottom:10 }}>
-          {[{v:false,l:'No restrictions'},{v:true,l:'Yes, I have restrictions'}].map(o=>(
-            <button key={String(o.v)} onClick={()=>setMe(p=>({...p,_fruitRestr:o.v,...(!o.v?{dislikedFruit:[],_fruitQ:''}:{})}))}
-              style={{ flex:1,padding:'8px 6px',borderRadius:8,fontSize:11,fontWeight:600,cursor:'pointer',border:`1.5px solid ${me._fruitRestr===o.v?'var(--green)':'var(--border)'}`,background:me._fruitRestr===o.v?'var(--green-pale)':'var(--white)',color:me._fruitRestr===o.v?'var(--green)':'var(--text-mid)' }}>
-              {me._fruitRestr===o.v?'✅ ':''}{o.l}
-            </button>
+        <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:6,textTransform:'uppercase',letterSpacing:0.5 }}>🚫 Fruits You Dislike</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:5 }}>
+          {(me.dislikedFruits||[]).map(f=>(
+            <span key={f} onClick={()=>setMe(p=>({...p,dislikedFruits:(p.dislikedFruits||[]).filter(x=>x!==f)}))}
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#FFF0F0',border:'1.5px solid var(--red)',color:'var(--red)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
+              {f} ×</span>
           ))}
         </div>
-        {me._fruitRestr && (
-          <>
-            <input className="inp no-ico" placeholder="Search fruits to exclude…" value={me._fruitQ||''} onChange={e=>setMe(p=>({...p,_fruitQ:e.target.value}))} style={{ marginBottom:8,fontSize:12 }} />
-            <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-              {(me.dislikedFruit||[]).map(f=>(
-                <button key={f} onClick={()=>setMe(p=>({...p,dislikedFruit:(p.dislikedFruit||[]).filter(x=>x!==f)}))}
-                  style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4 }}>
-                  {f} <span style={{fontWeight:700}}>×</span>
-                </button>
-              ))}
-              {(me._fruitQ||'').trim() && FRUITS_LIST
-                .filter(f=>f && f.toLowerCase().includes((me._fruitQ||'').toLowerCase())&&!(me.dislikedFruit||[]).includes(f))
-                .map(f=>(
-                  <button key={f} onClick={()=>setMe(p=>({...p,dislikedFruit:[...(p.dislikedFruit||[]),f],_fruitQ:''}))}
-                    style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--border)',background:'var(--white)',color:'var(--text-mid)',fontSize:12,cursor:'pointer' }}>
-                    + {f}
-                  </button>
-                ))
-              }
-              {!(me._fruitQ||'').trim() && !(me.dislikedFruit||[]).length && (
-                <div style={{fontSize:12,color:'var(--text-light)'}}>Type above to search and add</div>
-              )}
-            </div>
-          </>
-        )}
+        <MemberSearch placeholder="Search fruits…"
+          items={FRUITS_LIST} selected={me.dislikedFruits||[]}
+          onAdd={v=>setMe(p=>({...p,dislikedFruits:[...(p.dislikedFruits||[]),v]}))}/>
       </div>
 
       {/* Allergies */}
@@ -903,8 +947,10 @@ export default function Profile() {
                       <div style={{ display:'flex',gap:12,marginBottom:10,padding:'8px 10px',background:'#FAFAFA',borderRadius:8 }}>
                         {m.height && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Height</div><div style={{ fontSize:12,fontWeight:700 }}>{m.height} cm</div></div>}
                         {m.weight && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Weight</div><div style={{ fontSize:12,fontWeight:700 }}>{m.weight} kg</div></div>}
-                        {m.activityLevel && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Activity</div><div style={{ fontSize:12,fontWeight:700 }}>{ACTIVITY.find(a=>a.id===m.activityLevel)?.label||m.activityLevel}</div></div>}
+                        {m.activityLevel && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Activity</div><div style={{ fontSize:12,fontWeight:700 }}>{m.activityLevel}</div></div>}
                         {m.dietType && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Diet</div><div style={{ fontSize:12,fontWeight:700 }}>{m.dietType}</div></div>}
+                        {m.metRange && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>MET</div><div style={{ fontSize:12,fontWeight:700 }}>{m.metRange}</div></div>}
+                        {m.lifestyleCode && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Lifestyle</div><div style={{ fontSize:12,fontWeight:700 }}>{m.lifestyleCode}</div></div>}
                       </div>
                     )}
 
