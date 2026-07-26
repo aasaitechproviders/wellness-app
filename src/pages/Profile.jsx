@@ -61,7 +61,7 @@ const Tag = ({ label, icon }) => (
 // Simple inline search for family edit form
 
 function MemberSearch({ placeholder, items, selected, onAdd }) {
-  const [q, setQ] = React.useState('')
+  const [q, setQ] = useState('')
   const filtered = q.trim() ? items.filter(it=>it && !selected.includes(it)&&it.toLowerCase().includes(q.toLowerCase())).slice(0,12) : []
   return (
     <div>
@@ -85,7 +85,7 @@ function MemberSearch({ placeholder, items, selected, onAdd }) {
 }
 
 function FamilySearch({ placeholder, items, selected, onAdd }) {
-  const [q, setQ] = React.useState('')
+  const [q, setQ] = useState('')
   const filtered = q.trim() ? items.filter(it=>!selected.includes(it)&&it.toLowerCase().includes(q.toLowerCase())).slice(0,12) : []
   return (
     <div style={{position:'relative'}}>
