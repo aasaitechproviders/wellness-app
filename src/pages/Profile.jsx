@@ -427,7 +427,11 @@ export default function Profile() {
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Date of Birth</div>
-          <input className="inp no-ico" type="date" value={me.dob||''} max={new Date().toISOString().split('T')[0]} onChange={e=>setMe(p=>({...p,dob:e.target.value}))} />
+          <input className="inp no-ico" type="date" value={me.dob||''} max={new Date().toISOString().split('T')[0]} onChange={e=>{
+            const d=e.target.value
+            const age=ageFromDob(d)
+            setMe(p=>({...p,dob:d,ageRaw:age?String(age):p.ageRaw}))
+          }} />
         </div>
         <div>
           <div style={{ fontSize:11,fontWeight:700,color:'var(--text-mid)',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5 }}>Age</div>
@@ -886,7 +890,7 @@ export default function Profile() {
                       <div style={{ flex:1 }}>
                         <div style={{ fontWeight:700,fontSize:14 }}>{m.name}</div>
                         <div style={{ fontSize:12,color:'var(--text-light)',marginTop:1 }}>
-                          {[m.relationship, m.age&&`${m.age} yrs`, m.gender].filter(Boolean).join(' · ')}
+                          {[m.relationship, (ageFromDob(m.dob)||m.age)&&`${ageFromDob(m.dob)||m.age} yrs`, m.gender].filter(Boolean).join(' · ')}
                         </div>
                       </div>
                       <button onClick={()=>startEditMember(m)} style={{ padding:'5px 12px',borderRadius:20,border:'1.5px solid var(--green)',color:'var(--green)',background:'var(--green-pale)',fontSize:11,fontWeight:700,cursor:'pointer' }}>Edit</button>
