@@ -64,7 +64,6 @@ function MemberEditor({
   activityLevels, metRanges, lifestyleCodes,
 }) {
   // Search states live HERE so typing doesn't re-render parent
-  const [goalSearch, setGoalSearch] = useState('')
   const [hcSearch,   setHcSearch]   = useState('')
   const [frQ,        setFrQ]        = useState('')
   const [algQ,       setAlgQ]       = useState('')
@@ -208,42 +207,41 @@ function MemberEditor({
         </div>
       </div>
 
-      {/* Wellness Goals */}
+      {/* Wellness Goals — full grid */}
       <div style={{ marginBottom:12 }}>
-        <SectionLabel>Wellness Goals <span style={{ color:'var(--text-light)',fontWeight:400,fontSize:10 }}>(up to 3)</span></SectionLabel>
-        <input className="inp no-ico" placeholder="Search goals…" value={goalSearch} onChange={e=>setGoalSearch(e.target.value)} style={{fontSize:12}}/>
-        {goalSearch.trim() && (
-          <div style={{border:'1.5px solid var(--border)',borderRadius:10,marginTop:4,background:'#fff',maxHeight:180,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.08)'}}>
-            {goalsList
-              .filter(g=>g.name && g.name.toLowerCase().includes(goalSearch.toLowerCase()) && !(me.wellnessGoals||[]).includes(g.name))
-              .map(g=>(
-                <div key={g.name} onClick={()=>{toggleGoal(g.name);setGoalSearch('')}}
-                  style={{padding:'9px 14px',fontSize:13,cursor:'pointer',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:8}}
-                  onMouseOver={e=>e.currentTarget.style.background='var(--green-pale)'}
-                  onMouseOut={e=>e.currentTarget.style.background='#fff'}>
-                  <span style={{fontWeight:700,color:'var(--green)'}}>+</span> {g.emoji} {g.name}
-                </div>
-              ))
-            }
-            {goalsList.filter(g=>g.name&&g.name.toLowerCase().includes(goalSearch.toLowerCase())&&!(me.wellnessGoals||[]).includes(g.name)).length===0&&(
-              <div style={{padding:'10px 14px',fontSize:12,color:'var(--text-light)'}}>No matching goals</div>
-            )}
-          </div>
-        )}
-        {!goalSearch.trim()&&!(me.wellnessGoals||[]).length&&(
-          <div style={{fontSize:11,color:'var(--text-light)',marginTop:5}}>Type to search and select (max 3)</div>
-        )}
-        {(me.wellnessGoals||[]).length>0&&(
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-            {(me.wellnessGoals||[]).map(g=>(
-              <span key={g} onClick={()=>toggleGoal(g)}
-                style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,
-                  background:'var(--green)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                {GOAL_EMOJI[g]||'🌿'} {g} ×
-              </span>
-            ))}
-          </div>
-        )}
+        <SectionLabel>Wellness Goals <span style={{ color:'var(--text-light)',fontWeight:400,fontSize:10 }}>(tap to select, up to 3)</span></SectionLabel>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:4}}>
+          {goalsList.map(g=>{
+            const sel = (me.wellnessGoals||[]).includes(g.name)
+            return (
+              <button key={g.name} type="button"
+                onClick={()=>{
+                  if(sel){
+                    toggleGoal(g.name)
+                  } else {
+                    if((me.wellnessGoals||[]).length>=3){showToast('Max 3 goals per member','error');return}
+                    toggleGoal(g.name)
+                  }
+                }}
+                style={{padding:'12px 10px',borderRadius:12,cursor:'pointer',textAlign:'center',
+                  border:`2px solid ${sel?'var(--green)':'var(--border)'}`,
+                  background:sel?'var(--green-pale)':'#fff',
+                  position:'relative',transition:'all 0.15s'}}>
+                {sel && (
+                  <span style={{position:'absolute',top:6,right:8,color:'var(--green)',fontSize:14,fontWeight:700,lineHeight:1}}>×</span>
+                )}
+                <div style={{fontSize:22,marginBottom:4}}>{g.emoji}</div>
+                <div style={{fontSize:12,fontWeight:700,color:sel?'var(--green)':'var(--text)',lineHeight:1.3}}>{g.name}</div>
+                {g.desc && (
+                  <div style={{fontSize:10,color:'var(--text-light)',marginTop:3,lineHeight:1.3}}>{g.desc}</div>
+                )}
+                {sel && (
+                  <div style={{marginTop:4,fontSize:10,fontWeight:700,color:'var(--green)'}}>✓ Selected</div>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Health Challenges */}
