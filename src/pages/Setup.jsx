@@ -132,7 +132,7 @@ const blankMember = () => ({
   // new fields
   activityLevel:   '',
   metRange:        '',
-  lifestyleCode:   '',
+  lifestyleCode:   [],
   healthConditions:[],
   wellnessGoals:   [],
   foodRestrictions:[],
@@ -161,7 +161,7 @@ const memberFromDB = (m) => ({
   dob:             toDateInput(m.dob),
   activityLevel:   m.activityLevel   || '',
   metRange:        m.metRange        || '',
-  lifestyleCode:   m.lifestyleCode   || '',
+  lifestyleCode:   Array.isArray(m.lifestyleCode) ? m.lifestyleCode : (m.lifestyleCode ? [m.lifestyleCode] : []),
   wellnessGoals:   Array.isArray(m.wellnessGoals)    ? m.wellnessGoals    : [],
   healthConditions:Array.isArray(m.healthConditions) ? m.healthConditions : [],
   foodRestrictions:Array.isArray(m.foodRestrictions) ? m.foodRestrictions : [],
@@ -310,6 +310,13 @@ export default function Setup() {
       }
       const r = await api.updateFamily(family._id, body)
       updateFamily(r.family)
+      // Auto-fill first Self member's name from familyName
+      setMembers(prev => prev.map((m, idx) => {
+        if (idx === 0 && m.relationship === 'Self' && !m.name.trim()) {
+          return { ...m, name: form0.familyName.trim() }
+        }
+        return m
+      }))
       setStep(1)
     } catch(e) { showToast(e.message,'error') }
     finally { setBusy(false) }
@@ -344,11 +351,11 @@ export default function Setup() {
 
   const submitStep1 = async () => {
     if(members.some(m=>!m.name.trim())) return showToast('All members need a name','error')
-    setStep(2)
+    await saveMembersAndNext(2)
   }
 
   const submitStep2 = async () => {
-    setStep(3)
+    await saveMembersAndNext(3)
   }
 
   const submitStep3 = async () => {
@@ -634,23 +641,39 @@ export default function Setup() {
                       )}
                     </div>
 
-                    {/* Lifestyle Code */}
+                    {/* Lifestyle Code — multiselect */}
                     <div className="field">
-                      <label className="label">Lifestyle</label>
-                      <select className="inp no-ico" value={m.lifestyleCode}
-                        onChange={e=>setMember(i,'lifestyleCode',e.target.value)}>
-                        <option value="">Select lifestyle…</option>
-                        {lifestyleCodes.map(l=>(
-                          <option key={l._id} value={l.lifestyleCode}>
-                            {l.lifestyleName}
-                          </option>
-                        ))}
-                      </select>
-                      {m.lifestyleCode && lifestyleCodes.find(l=>l.lifestyleCode===m.lifestyleCode)?.displayDescription && (
-                        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
-                          {lifestyleCodes.find(l=>l.lifestyleCode===m.lifestyleCode)?.displayDescription}
-                        </div>
-                      )}
+                      <label className="label">Lifestyle <span className="opt">(select all that apply)</span></label>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                        {lifestyleCodes.map(l=>{
+                          const sel = (m.lifestyleCode||[]).includes(l.lifestyleCode)
+                          return (
+                            <button key={l._id} type="button"
+                              onClick={()=>{
+                                const arr = m.lifestyleCode||[]
+                                setMember(i,'lifestyleCode', sel ? arr.filter(x=>x!==l.lifestyleCode) : [...arr, l.lifestyleCode])
+                              }}
+                              style={{padding:'8px 14px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
+                                border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`,
+                                background:sel?'var(--green)':'#fff',
+                                color:sel?'#fff':'var(--text-mid)',
+                                display:'flex',alignItems:'center',gap:5}}>
+                              {l.lifestyleName}
+                              {sel && <span style={{fontWeight:700,fontSize:14,lineHeight:1}}>×</span>}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {(m.lifestyleCode||[]).length>0 && (()=>{
+                        const descs = (m.lifestyleCode||[])
+                          .map(code => lifestyleCodes.find(l=>l.lifestyleCode===code))
+                          .filter(l=>l?.displayDescription)
+                        return descs.length>0 ? (
+                          <div style={{fontSize:11,color:'var(--text-light)',marginTop:6,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
+                            {descs.map(l=>l.displayDescription).join(' · ')}
+                          </div>
+                        ) : null
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -717,22 +740,73 @@ export default function Setup() {
                     />
                   </div>
 
-                  {/* ── Allergies ── */}
+                  {/* ── Allergies — multiselect grid + Add New ── */}
                   <div className="field">
-                    <label className="label">Allergies</label>
-                    <SearchSelect
-                      placeholder="Search allergies…"
-                      items={allergyList.map(a=>a.name)}
-                      selected={m.allergies||[]}
-                      onAdd={v=>toggleMemberArray(i,'allergies',v)}
-                      onRemove={v=>toggleMemberArray(i,'allergies',v)}
-                      chipColor="orange"
-                    />
-                    <div style={{marginTop:10}}>
-                      <label className="label">Other Allergies <span className="opt">(not in list — separate with commas)</span></label>
-                      <input className="inp no-ico" placeholder="e.g. Mango latex, Specific spice…"
-                        defaultValue={m.customAllergies||''}
-                        onBlur={e=>setMember(i,'customAllergies',e.target.value)}/>
+                    <label className="label">Allergies <span className="opt">(tap to select / deselect)</span></label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:7,marginTop:4}}>
+                      {allergyList.map(a=>{
+                        const sel = (m.allergies||[]).includes(a.name)
+                        return (
+                          <button key={a._id||a.name} type="button"
+                            onClick={()=>toggleMemberArray(i,'allergies',a.name)}
+                            style={{padding:'7px 13px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
+                              border:`1.5px solid ${sel?'#E65100':'var(--border)'}`,
+                              background:sel?'#FFF3E0':'#fff',
+                              color:sel?'#E65100':'var(--text-mid)',
+                              display:'flex',alignItems:'center',gap:5}}>
+                            {sel&&<span style={{fontSize:11}}>⚠</span>} {a.name}
+                            {sel && <span style={{fontWeight:700,fontSize:14,lineHeight:1}}>×</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {/* Custom allergies already added */}
+                    {(m.customAllergies||'').trim() && (
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+                        {(m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean).map(ca=>(
+                          <span key={ca} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'5px 11px',
+                            borderRadius:20,background:'#FFF3E0',border:'1.5px solid #E65100',color:'#E65100',
+                            fontSize:12,fontWeight:600}}>
+                            ⚠ {ca}
+                            <span onClick={()=>{
+                              const updated = (m.customAllergies||'').split(',').map(s=>s.trim()).filter(x=>x&&x!==ca).join(', ')
+                              setMember(i,'customAllergies',updated)
+                            }} style={{cursor:'pointer',fontWeight:700,fontSize:14,lineHeight:1,marginLeft:2}}>×</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Add New allergy */}
+                    <div style={{marginTop:10,display:'flex',gap:8,alignItems:'center'}}>
+                      <input className="inp no-ico" placeholder="Add allergy not in list…"
+                        id={`custom-allergy-${m.memberId}`}
+                        style={{fontSize:12,flex:1}}
+                        onKeyDown={e=>{
+                          if(e.key==='Enter' && e.target.value.trim()){
+                            const val = e.target.value.trim()
+                            const existing = (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean)
+                            if(!existing.includes(val)){
+                              setMember(i,'customAllergies',[...existing,val].join(', '))
+                            }
+                            e.target.value=''
+                          }
+                        }}/>
+                      <button type="button"
+                        onClick={()=>{
+                          const inp = document.getElementById(`custom-allergy-${m.memberId}`)
+                          if(!inp||!inp.value.trim()) return
+                          const val = inp.value.trim()
+                          const existing = (m.customAllergies||'').split(',').map(s=>s.trim()).filter(Boolean)
+                          if(!existing.includes(val)){
+                            setMember(i,'customAllergies',[...existing,val].join(', '))
+                          }
+                          inp.value=''
+                        }}
+                        style={{padding:'8px 16px',borderRadius:10,border:'1.5px solid var(--green)',
+                          background:'var(--green-pale)',color:'var(--green)',fontSize:12,fontWeight:700,
+                          cursor:'pointer',whiteSpace:'nowrap'}}>
+                        + Add
+                      </button>
                     </div>
                   </div>
 
@@ -751,7 +825,6 @@ export default function Setup() {
             {/* Wellness Goals — per member, BMI-aware */}
             {members.map((m,i)=>{
               const recommended = getRecommendedGoal(m.height, m.weight)
-              const goalNames = wellnessGoals.map(g=>g.displayName).filter(Boolean)
               return (
                 <div key={m.memberId} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
                   <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
@@ -782,18 +855,41 @@ export default function Setup() {
                         </button>
                       </div>
                     )}
-                    {/* Goal search */}
-                    <SearchSelect
-                      placeholder="Search wellness goals…"
-                      items={goalNames}
-                      selected={m.wellnessGoals||[]}
-                      onAdd={v=>{
-                        if((m.wellnessGoals||[]).length>=3){showToast('Max 3 goals per member','error');return}
-                        setMember(i,'wellnessGoals',[...(m.wellnessGoals||[]),v])
-                      }}
-                      onRemove={v=>setMember(i,'wellnessGoals',(m.wellnessGoals||[]).filter(x=>x!==v))}
-                      chipColor="green"
-                    />
+                    {/* All goals grid — tap to select */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                      {wellnessGoals.filter(g=>g.displayName).map(g=>{
+                        const gn = g.displayName
+                        const sel = (m.wellnessGoals||[]).includes(gn)
+                        const GEMOJI = {'Immunity Support':'🛡️','Protein Support':'💪','Iron Support':'💧','Weight Management':'⚖️','Diabetes Friendly':'🩺','Diabetes Control':'🩺','Heart Wellness':'❤️','Digestive Wellness':'🌀','Bone Health':'🦴',"Women's Wellness":'🌸','Kids Nutrition':'😊','Senior Wellness':'👴','Detox':'✨','General Wellness':'🌿','Other Goal':'🌿'}
+                        return (
+                          <button key={gn} type="button"
+                            onClick={()=>{
+                              if(sel){
+                                setMember(i,'wellnessGoals',(m.wellnessGoals||[]).filter(x=>x!==gn))
+                              } else {
+                                if((m.wellnessGoals||[]).length>=3){showToast('Max 3 goals per member','error');return}
+                                setMember(i,'wellnessGoals',[...(m.wellnessGoals||[]),gn])
+                              }
+                            }}
+                            style={{padding:'12px 10px',borderRadius:12,cursor:'pointer',textAlign:'center',
+                              border:`2px solid ${sel?'var(--green)':'var(--border)'}`,
+                              background:sel?'var(--green-pale)':'#fff',
+                              position:'relative',transition:'all 0.15s'}}>
+                            {sel && (
+                              <span style={{position:'absolute',top:6,right:8,color:'var(--green)',fontSize:14,fontWeight:700,lineHeight:1}}>×</span>
+                            )}
+                            <div style={{fontSize:22,marginBottom:4}}>{GEMOJI[gn]||'🌿'}</div>
+                            <div style={{fontSize:12,fontWeight:700,color:sel?'var(--green)':'var(--text)',lineHeight:1.3}}>{gn}</div>
+                            {g.goalDescription && (
+                              <div style={{fontSize:10,color:'var(--text-light)',marginTop:3,lineHeight:1.3}}>{g.goalDescription}</div>
+                            )}
+                            {sel && (
+                              <div style={{marginTop:4,fontSize:10,fontWeight:700,color:'var(--green)'}}>✓ Selected</div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )
