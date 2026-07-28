@@ -17,6 +17,7 @@ import { Orders, OrderDetail } from './pages/Orders'
 import Profile         from './pages/Profile'
 import Cart            from './pages/Cart'
 import WellnessProgress from './pages/WellnessProgress'
+import Appointment     from './pages/Appointment'
 
 function Guard({ children }) {
   const { family, loading } = useAuth()
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/profile"            element={<Guard><Profile /></Guard>} />
         <Route path="/cart"               element={<Guard><Cart /></Guard>} />
         <Route path="/wellness-progress"  element={<Guard><WellnessProgress /></Guard>} />
+        <Route path="/appointment"        element={<Guard><Appointment /></Guard>} />
         <Route path="*"                   element={<Navigate to="/" replace />} />
       </Routes>
     </div>

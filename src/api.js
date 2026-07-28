@@ -64,4 +64,17 @@ export const api = {
   getApartments: (city) => req('GET', `/delivery/apartments${city ? `?city=${city}` : ''}`),
   getSlots: (apartmentId) => req('GET', `/delivery/slots/${apartmentId}`),
   scheduleDelivery: (body) => req('POST', '/delivery/schedule', body),
+
+  // Appointments
+  checkClinicalReview: (body) => req('POST', '/appointments/check', body),
+  requestAppointment: (body) => req('POST', '/appointments/request', body),
+  getMyAppointments: () => req('GET', '/appointments/mine'),
+  getAppointment: (id) => req('GET', `/appointments/${id}`),
+  cancelAppointment: (id) => req('PUT', `/appointments/${id}/cancel`),
+  getCallStatus: (id) => req('GET', `/appointments/${id}/call-status`),
+  updateCallStatus: (id, callStatus) => req('PUT', `/appointments/${id}/call-status`, { callStatus }),
+
+  // WebRTC signaling
+  sendSignal: (body) => req('POST', '/rtc/signal', body),
+  getSignals: (appointmentId) => req('GET', `/rtc/signal/${appointmentId}?from=admin`),
 }

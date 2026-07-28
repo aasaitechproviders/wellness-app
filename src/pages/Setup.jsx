@@ -384,6 +384,31 @@ export default function Setup() {
       }
       const r = await api.getFamily(family._id)
       updateFamily(r.family)
+
+      // Check if any member's health conditions require clinical review
+      const allConditions = members.flatMap(m => m.healthConditions || []).filter(Boolean)
+      if (allConditions.length) {
+        try {
+          const check = await api.checkClinicalReview({ healthConditions: allConditions })
+          if (check.required) {
+            // Find the first member with a condition that needs review
+            const needsMember = members.find(m =>
+              (m.healthConditions||[]).some(c => check.conditions.includes(c))
+            )
+            nav('/appointment', {
+              state: {
+                book: true,
+                conditions: check.conditions,
+                memberId: needsMember?.memberId || members[0]?.memberId,
+                memberName: needsMember?.name || members[0]?.name || '',
+              },
+              replace: true,
+            })
+            return
+          }
+        } catch {}
+      }
+
       nav('/home')
     } catch(e) { showToast(e.message,'error') }
     finally { setBusy(false) }
