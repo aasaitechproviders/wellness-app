@@ -13,7 +13,7 @@ const acolor = i => ACOLORS[i%ACOLORS.length]
 
 const GOAL_ICONS = { 'Immunity Support':'🛡️','Iron Support':'💧','Protein Support':'💪','Weight Management':'⚖️','Diabetes Control':'🩺','Diabetes Friendly':'🩺','Heart Wellness':'❤️','Digestive Wellness':'🌀','Detox':'✨','Kids Nutrition':'😊','Senior Wellness':'👴','Bone Health':'🦴','General Wellness':'🌿',"Women's Wellness":'🌸' }
 
-export default function Home() {
+export default function Home({ unreadCount = 0 }) {
   const { family, updateFamily } = useAuth()
   const { addToCart, removeFromCart, isInCart } = useCart()
   const nav = useNavigate()
