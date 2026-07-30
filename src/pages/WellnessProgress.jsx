@@ -74,7 +74,7 @@ const PRow = ({emoji,label,val,max}) => (
 const Card = ({children,style})=><div style={{background:'var(--white)',borderRadius:14,border:'1px solid var(--border)',padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.05)',...style}}>{children}</div>
 const STitle = ({children})=><div style={{fontSize:14,fontWeight:700,marginBottom:10,color:'var(--text)'}}>{children}</div>
 
-export default function WellnessProgress() {
+export default function WellnessProgress({ unreadCount = 0, setUnreadCount }) {
   const {family} = useAuth()
   const nav = useNavigate()
   const name = family?.members?.[0]?.name?.split(' ')?.[0] || family?.familyName?.split('-')?.[0] || 'Priya'
@@ -91,9 +91,13 @@ export default function WellnessProgress() {
           <span style={{fontFamily:'var(--font-serif)',fontSize:14,fontWeight:700,color:'var(--green-dark)'}}>KRISHA PURE</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{position:'relative',cursor:'pointer'}}>
+          <div style={{position:'relative',cursor:'pointer'}} onClick={()=>nav('/notifications')}>
             <span style={{fontSize:22}}>🔔</span>
-            <span style={{position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:8,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center'}}>2</span>
+            {unreadCount > 0 && (
+              <span style={{position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:8,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </div>
           <div style={{width:34,height:34,borderRadius:'50%',background:'var(--green)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,cursor:'pointer'}} onClick={()=>nav('/profile')}>
             PK

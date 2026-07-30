@@ -77,4 +77,8 @@ export const api = {
   // WebRTC signaling
   sendSignal: (body) => req('POST', '/rtc/signal', body),
   getSignals: (appointmentId) => req('GET', `/rtc/signal/${appointmentId}?from=admin`),
+
+  // Notifications
+  getNotifications:  ()     => req('GET', '/notifications'),
+  markNotifRead:     (id)   => req('PUT', '/notifications/read', id ? { id } : {}),
 }

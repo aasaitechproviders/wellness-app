@@ -91,9 +91,13 @@ export default function Home() {
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ position:'relative',cursor:'pointer' }}>
+          <div style={{ position:'relative',cursor:'pointer' }} onClick={()=>nav('/notifications')}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            <span style={{ position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:9,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center' }}>2</span>
+            {unreadCount > 0 && (
+              <span style={{ position:'absolute',top:-4,right:-4,background:'var(--red)',color:'#fff',fontSize:9,fontWeight:700,width:15,height:15,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </div>
           <div onClick={()=>nav('/profile')} style={{ width:36,height:36,borderRadius:'50%',background:'var(--green)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,cursor:'pointer' }}>
             {initials(f?.familyName)}
