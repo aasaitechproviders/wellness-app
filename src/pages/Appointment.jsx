@@ -5,7 +5,7 @@ import { api } from '../api'
 import { showToast } from '../components/Toast'
 import BottomNav from '../components/BottomNav'
 
-const WS_URL  = 'ws://13.207.147.69:3001'
+const WS_URL  = 'wss://13.207.147.69.nip.io/ws'
 const ICE_SERVERS = [
   { urls: 'stun:13.207.147.69:3478' },
   {
