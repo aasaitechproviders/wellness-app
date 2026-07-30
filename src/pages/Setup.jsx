@@ -272,13 +272,30 @@ export default function Setup() {
   const removeMember = i  => setMembers(prev => prev.filter((_,idx)=>idx!==i))
 
 
-  // ── BMI-based wellness goal recommendation ──
-  const getRecommendedGoal = (height, weight) => {
+  // ── BMI-based wellness goal recommendation (age-aware) ──
+  const getRecommendedGoal = (height, weight, dob) => {
     if (!height || !weight) return null
     const h = parseFloat(height) / 100
     const bmi = parseFloat(weight) / (h * h)
     if (isNaN(bmi)) return null
-    const rule = bmiRules.find(r => bmi >= (r.bmiMin||0) && bmi < (r.bmiMax||999))
+    const age = ageOf(dob)
+    const isOlderAdult = age !== null && age >= 60
+    // Filter rules by age category: Older Adults get Older Adult rules first, Adults get Adult rules
+    // Overlapping BMI ranges (e.g. 23-29.99) — pick correct category
+    const matchingRules = bmiRules.filter(r =>
+      bmi >= (r.bmiMin || 0) && bmi < (r.bmiMax || 999)
+    )
+    let rule = null
+    if (isOlderAdult) {
+      // Prefer Older Adult rule if exists, else fall back to Adult
+      rule = matchingRules.find(r => r.ageCategory === 'Older Adult')
+          || matchingRules.find(r => r.ageCategory === 'Adult')
+          || matchingRules[0]
+    } else {
+      // Non-older-adult: only use Adult rules, never Older Adult
+      rule = matchingRules.find(r => r.ageCategory === 'Adult')
+          || matchingRules.find(r => !r.ageCategory || r.ageCategory === 'All')
+    }
     return rule?.recommendedWellnessGoal || null
   }
 
@@ -292,6 +309,10 @@ export default function Setup() {
   const submitStep0 = async () => {
     if(!form0.familyName.trim()) return showToast('Family name required','error')
     if(!form0.city)              return showToast('Select a city','error')
+    if(!form0.flat.trim())       return showToast('Flat / House No. is required','error')
+    if(!form0.pincode.trim())    return showToast('Pincode is required','error')
+    if(form0.deliveryType==='gated' && !form0.apartmentId && !form0.apartmentName.trim())
+      return showToast('Please select or enter your apartment / community','error')
     setBusy(true)
     try {
       const body = {
@@ -350,7 +371,12 @@ export default function Setup() {
   }
 
   const submitStep1 = async () => {
-    if(members.some(m=>!m.name.trim())) return showToast('All members need a name','error')
+    for (const m of members) {
+      if (!m.name.trim()) return showToast('All members need a name','error')
+      if (!m.relationship) return showToast(`Select a relationship for ${m.name||'member'}`, 'error')
+      if (!m.dob && !m.age) return showToast(`Please enter date of birth for ${m.name||'member'}`, 'error')
+      if (!m.gender) return showToast(`Select gender for ${m.name||'member'}`, 'error')
+    }
     await saveMembersAndNext(2)
   }
 
@@ -849,7 +875,7 @@ export default function Setup() {
 
             {/* Wellness Goals — per member, BMI-aware */}
             {members.map((m,i)=>{
-              const recommended = getRecommendedGoal(m.height, m.weight)
+              const recommended = getRecommendedGoal(m.height, m.weight, m.dob)
               return (
                 <div key={m.memberId} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
                   <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>

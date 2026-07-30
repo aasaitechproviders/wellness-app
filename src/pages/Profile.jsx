@@ -181,15 +181,33 @@ function MemberEditor({
         </select>
       </div>
 
-      {/* Lifestyle Code */}
+      {/* Lifestyle Code — multiselect chips */}
       <div style={{ marginBottom:12 }}>
-        <SectionLabel>Lifestyle</SectionLabel>
-        <select className="inp no-ico" value={me.lifestyleCode||''} onChange={e=>setMe(p=>({...p,lifestyleCode:e.target.value}))}>
-          <option value="">Select lifestyle…</option>
-          {lifestyleCodes.map(l=>(
-            <option key={l._id} value={l.lifestyleCode}>{l.lifestyleName}</option>
-          ))}
-        </select>
+        <SectionLabel>Lifestyle <span style={{ fontWeight:400,fontSize:10 }}>(select all that apply)</span></SectionLabel>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:8,marginTop:4 }}>
+          {lifestyleCodes.map(l => {
+            const arr = Array.isArray(me.lifestyleCode) ? me.lifestyleCode : (me.lifestyleCode ? [me.lifestyleCode] : [])
+            const sel = arr.includes(l.lifestyleCode)
+            return (
+              <button key={l._id} type="button"
+                onClick={() => {
+                  const arr2 = Array.isArray(me.lifestyleCode) ? me.lifestyleCode : (me.lifestyleCode ? [me.lifestyleCode] : [])
+                  setMe(p => ({
+                    ...p,
+                    lifestyleCode: sel ? arr2.filter(x => x !== l.lifestyleCode) : [...arr2, l.lifestyleCode]
+                  }))
+                }}
+                style={{ padding:'8px 14px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
+                  border:`1.5px solid ${sel?'var(--green)':'var(--border)'}`,
+                  background:sel?'var(--green)':'#fff',
+                  color:sel?'#fff':'var(--text-mid)',
+                  display:'flex',alignItems:'center',gap:5 }}>
+                {l.lifestyleName}
+                {sel && <span style={{ fontWeight:700,fontSize:14,lineHeight:1 }}>×</span>}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Diet Type */}
@@ -491,7 +509,7 @@ export default function Profile() {
       weight:              m.weight ? String(m.weight) : '',
       activityLevel:    m.activityLevel   || '',
       metRange:         m.metRange        || '',
-      lifestyleCode:    m.lifestyleCode   || '',
+      lifestyleCode:    Array.isArray(m.lifestyleCode) ? m.lifestyleCode : (m.lifestyleCode ? [m.lifestyleCode] : []),
       dietType:         m.dietType        || 'Vegetarian',
       wellnessGoals:    [...(m.wellnessGoals    || [])],
       healthConditions: [...(m.healthConditions || m.healthChallenges || [])],
@@ -519,7 +537,7 @@ export default function Profile() {
       weight:              '',
       activityLevel:    '',
       metRange:         '',
-      lifestyleCode:    '',
+      lifestyleCode:    [],
       dietType:         'Vegetarian',
       wellnessGoals:    [],
       healthConditions: [],
@@ -906,7 +924,7 @@ export default function Profile() {
                         {m.activityLevel && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Activity</div><div style={{ fontSize:12,fontWeight:700 }}>{m.activityLevel}</div></div>}
                         {m.dietType && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Diet</div><div style={{ fontSize:12,fontWeight:700 }}>{m.dietType}</div></div>}
                         {m.metRange && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>MET</div><div style={{ fontSize:12,fontWeight:700 }}>{m.metRange}</div></div>}
-                        {m.lifestyleCode && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Lifestyle</div><div style={{ fontSize:12,fontWeight:700 }}>{m.lifestyleCode}</div></div>}
+                        {(Array.isArray(m.lifestyleCode)?m.lifestyleCode:[m.lifestyleCode]).filter(Boolean).length>0 && <div style={{ textAlign:'center' }}><div style={{ fontSize:10,color:'var(--text-light)' }}>Lifestyle</div><div style={{ fontSize:12,fontWeight:700 }}>{(Array.isArray(m.lifestyleCode)?m.lifestyleCode:[m.lifestyleCode]).filter(Boolean).join(', ')}</div></div>}
                       </div>
                     )}
 
