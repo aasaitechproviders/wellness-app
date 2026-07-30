@@ -308,7 +308,8 @@ export default function Appointment() {
 
       <div className="page-shell-scroll with-nav" style={{ padding:'16px 18px' }}>
 
-        {/* Info banner */}
+        {/* Info banner — only show when conditions triggered the flow */}
+        {triggerConditions.length > 0 && (
         <div style={{ background:'linear-gradient(135deg,#E8F5E9,#C8E6C9)',borderRadius:14,padding:'16px 18px',marginBottom:16,
           border:'1.5px solid #A5D6A7' }}>
           <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:8 }}>
@@ -319,6 +320,7 @@ export default function Appointment() {
             Your health profile includes conditions that need a nutritionist's review before we create your personalized wellness basket. This ensures your basket is safe and effective for your needs.
           </div>
         </div>
+        )}
 
         {/* Conditions that triggered */}
         {triggerConditions.length > 0 && (

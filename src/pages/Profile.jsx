@@ -952,7 +952,7 @@ export default function Profile() {
 
         {/* ══════ QUICK LINKS ══════ */}
         <div style={{ display:'flex',flexDirection:'column',gap:8,marginTop:4 }}>
-          {[['🎯','Manage Wellness Goals',()=>nav('/goals')],['📦','My Orders',()=>nav('/orders')],['🧺','Browse Baskets',()=>nav('/recommend')]].map(([ic,lb,fn])=>(
+          {[['🎯','Manage Wellness Goals',()=>nav('/goals')],['📦','My Orders',()=>nav('/orders')],['🧺','Browse Baskets',()=>nav('/recommend')],['📅','Book a Consultation',()=>nav('/appointment',{state:{book:true}})],['🩺','My Appointments',()=>nav('/appointment')]].map(([ic,lb,fn])=>(
             <div key={lb} onClick={fn} style={{ background:'var(--white)',borderRadius:12,padding:'13px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',border:'1px solid var(--border)' }}>
               <span style={{ fontSize:20 }}>{ic}</span>
               <span style={{ fontWeight:600,fontSize:13,flex:1 }}>{lb}</span>
