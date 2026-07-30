@@ -18,6 +18,8 @@ import Profile         from './pages/Profile'
 import Cart            from './pages/Cart'
 import WellnessProgress from './pages/WellnessProgress'
 import Appointment     from './pages/Appointment'
+import { useEffect, useState, useRef } from 'react'
+import { api } from './api'
 
 function Guard({ children }) {
   const { family, loading } = useAuth()
@@ -27,6 +29,29 @@ function Guard({ children }) {
 }
 
 export default function App() {
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null)
+  const { family } = useAuth()
+
+  // Global call poller — detects incoming calls from any page
+  useEffect(() => {
+    if (!family?._id) return
+    const poll = setInterval(async () => {
+      try {
+        const d = await api.getMyAppointments()
+        const assigned = (d.appointments || []).filter(a => a.status === 'assigned')
+        for (const apt of assigned) {
+          const cs = await api.getCallStatus(apt._id)
+          if (cs.callStatus === 'ringing') {
+            setGlobalIncomingCall(apt)
+            clearInterval(poll)
+            return
+          }
+        }
+      } catch {}
+    }, 4000)
+    return () => clearInterval(poll)
+  }, [family?._id])
+
   return (
     <div className="app-shell">
       <Toast />
