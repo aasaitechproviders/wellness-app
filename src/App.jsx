@@ -30,6 +30,24 @@ function Guard({ children }) {
 
 export default function App() {
   const [globalIncomingCall, setGlobalIncomingCall] = useState(null)
+
+  // Unlock Web Audio API on first user interaction (required for mobile)
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        ctx.resume().then(() => ctx.close())
+      } catch {}
+      document.removeEventListener('touchstart', unlock)
+      document.removeEventListener('click', unlock)
+    }
+    document.addEventListener('touchstart', unlock, { once: true })
+    document.addEventListener('click', unlock, { once: true })
+    return () => {
+      document.removeEventListener('touchstart', unlock)
+      document.removeEventListener('click', unlock)
+    }
+  }, [])
   const { family } = useAuth()
 
   // Global call poller — detects incoming calls from any page

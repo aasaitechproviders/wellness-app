@@ -256,6 +256,8 @@ export default function Appointment() {
           if (d.callStatus === 'ringing') {
             setIncomingCall(apt)
             clearInterval(poll)
+            // Play ringtone — unlock audio context first for mobile
+            playRingtone()
             return
           }
         } catch {}
@@ -303,6 +305,43 @@ export default function Appointment() {
     completed: { label:'Completed', color:'#2D6A35', bg:'#E8F5E9', icon:'✅' },
     cancelled: { label:'Cancelled', color:'#757575', bg:'#F5F5F5', icon:'✕' },
   }
+
+  // ── Audio unlock + ringtone for mobile ──
+  const ringAudioRef = useRef(null)
+
+  const playRingtone = () => {
+    try {
+      // Create oscillator-based ringtone using Web Audio API (works without audio file)
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const playBeep = (startTime) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = 440
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.3, startTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4)
+        osc.start(startTime)
+        osc.stop(startTime + 0.4)
+      }
+      // Play 3 beeps
+      playBeep(ctx.currentTime)
+      playBeep(ctx.currentTime + 0.6)
+      playBeep(ctx.currentTime + 1.2)
+      ringAudioRef.current = ctx
+    } catch {}
+  }
+
+  const stopRingtone = () => {
+    try { ringAudioRef.current?.close() } catch {}
+    ringAudioRef.current = null
+  }
+
+  // Stop ringtone when call is accepted/declined
+  useEffect(() => {
+    if (!incomingCall) stopRingtone()
+  }, [incomingCall])
 
   const needsBooking = showBooking || (!loading && triggerConditions.length > 0 &&
     !appointments.some(a => ['requested','assigned'].includes(a.status) && a.memberId === triggerMemberId))

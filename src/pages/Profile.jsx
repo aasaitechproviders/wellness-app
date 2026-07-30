@@ -590,6 +590,25 @@ export default function Profile() {
       setF(fresh); updateFamily(fresh)
       setEditSection(null)
       showToast(me.memberId==='new'?'Member added ✓':'Member updated ✓','success')
+
+      // Check if updated health conditions require clinical review
+      const conditions = payload.healthConditions || []
+      if (conditions.length && !conditions.includes('No Known Condition')) {
+        try {
+          const check = await api.checkClinicalReview({ healthConditions: conditions })
+          if (check.required) {
+            nav('/appointment', {
+              state: {
+                book: true,
+                conditions: check.conditions,
+                memberId: me.memberId,
+                memberName: me.name,
+              }
+            })
+            return
+          }
+        } catch {}
+      }
     } catch(e) { showToast(e.message||'Save failed','error') }
     finally { setSaving(false) }
   }
@@ -630,7 +649,7 @@ export default function Profile() {
         {fData?.city && <div style={{ color:'rgba(255,255,255,0.55)',fontSize:11,marginTop:2 }}>📍 {fData.city}</div>}
       </div>
 
-      <div className="page-shell-scroll with-nav" style={{ padding:'14px 16px' }}>
+      <div className="page-shell-scroll with-nav" style={{ padding:'14px 16px', paddingBottom:120 }}>
 
         {/* ══════ FAMILY / ADDRESS SECTION ══════ */}
         {editSection==='family' ? (
