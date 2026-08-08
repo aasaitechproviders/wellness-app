@@ -36,8 +36,11 @@ export const api = {
   recommend: (body) => req('POST', '/wellness/recommend', body),
 
   // Products (replaces old ingredients)
-  getProducts: (params) => req('GET', `/products${params ? '?' + new URLSearchParams(params) : ''}`),
-  getProduct: (id) => req('GET', `/products/${id}`),
+  getProducts:     (params) => req('GET', `/products${params ? '?' + new URLSearchParams(params) : ''}`),
+  getProduct:      (id)     => req('GET', `/products/${id}`),
+  // Alias — some components still call getIngredients
+  getIngredients:  (params) => req('GET', `/products${params ? '?' + new URLSearchParams(params) : ''}`),
+  getIngredient:   (id)     => req('GET', `/products/${id}`),
 
   // Subscriptions
   getPlans: () => req('GET', '/subscriptions/plans'),
