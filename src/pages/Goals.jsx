@@ -96,6 +96,33 @@ export default function Goals() {
   const curG  = cur ? (local[cur.memberId]  || []) : []
   const curHC = cur ? (hcLocal[cur.memberId]|| []) : []
 
+  // Age-restricted goals — only show for members meeting the age requirement
+  const AGE_RESTRICTED = {
+    'Senior Wellness':  { min: 60 },
+    'Healthy Ageing':   { min: 60 },
+    'Premature Ageing': { min: 60 },
+    'Aging Well':       { min: 60 },
+    'Kids Nutrition':   { max: 18 },
+  }
+
+  const memberAge = (m) => {
+    if (!m) return null
+    if (m.age && !isNaN(m.age)) return Number(m.age)
+    if (m.dob) return Math.floor((Date.now() - new Date(m.dob)) / 31557600000)
+    return null
+  }
+
+  const isGoalAllowed = (goalName, age) => {
+    const rule = AGE_RESTRICTED[goalName]
+    if (!rule) return true
+    if (age === null) return true
+    if (rule.min && age < rule.min) return false
+    if (rule.max && age > rule.max) return false
+    return true
+  }
+
+  const curAge = memberAge(cur)
+
   const goalsList = apiGoals.length
     ? apiGoals
         .map(g => {
@@ -103,8 +130,8 @@ export default function Goals() {
           const meta = GOALS_META.find(x => x.name === name)
           return { name, emoji: meta?.emoji || '🌿', desc: g.goalDescription || g.description || meta?.desc || '' }
         })
-        .filter(g => g.name)
-    : GOALS_META
+        .filter(g => g.name && isGoalAllowed(g.name, curAge))
+    : GOALS_META.filter(g => isGoalAllowed(g.name, curAge))
 
   const hcList = apiHC.length ? apiHC : HC_FALLBACK
 

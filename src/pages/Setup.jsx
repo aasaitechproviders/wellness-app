@@ -908,7 +908,22 @@ export default function Setup() {
                     )}
                     {/* All goals grid — tap to select */}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                      {wellnessGoals.filter(g=>g.displayName).map(g=>{
+                      {wellnessGoals.filter(g=>{
+                        if(!g.displayName) return false
+                        const age = m.age ? Number(m.age) : (m.dob ? Math.floor((Date.now()-new Date(m.dob))/31557600000) : null)
+                        const AGE_RESTRICTED = {
+                          'Senior Wellness':  { min: 60 },
+                          'Healthy Ageing':   { min: 60 },
+                          'Premature Ageing': { min: 60 },
+                          'Aging Well':       { min: 60 },
+                          'Kids Nutrition':   { max: 18 },
+                        }
+                        const rule = AGE_RESTRICTED[g.displayName]
+                        if (!rule || age === null) return true
+                        if (rule.min && age < rule.min) return false
+                        if (rule.max && age > rule.max) return false
+                        return true
+                      }).map(g=>{
                         const gn = g.displayName
                         const sel = (m.wellnessGoals||[]).includes(gn)
                         const GEMOJI = {'Immunity Support':'🛡️','Protein Support':'💪','Iron Support':'💧','Weight Management':'⚖️','Diabetes Friendly':'🩺','Diabetes Control':'🩺','Heart Wellness':'❤️','Digestive Wellness':'🌀','Bone Health':'🦴',"Women's Wellness":'🌸','Kids Nutrition':'😊','Senior Wellness':'👴','Detox':'✨','General Wellness':'🌿','Other Goal':'🌿'}
