@@ -60,13 +60,48 @@ export default function BasketDetail() {
 
   const init = (b) => {
     setBasket(b)
-    api.getIngredients({ limit: 141, page: 1 }).then(d => {
+    api.getIngredients({ limit: 200, page: 1 }).then(d => {
       const map = {}
-      ;(d.ingredients || []).forEach(x => { map[x.name] = x })
+      ;(d.ingredients || d.products || []).forEach(x => { map[x.name] = x })
       setCatalog(map)
-      setItems((b.ingredientNames || []).map((name, i) => mkItem(name, i, map)))
+
+      // Use basketItems from engine if available (has correct qty + price from product master)
+      // Fall back to ingredientNames for older/static baskets
+      if (b.basketItems && b.basketItems.length > 0) {
+        setItems(b.basketItems.map((item, i) => ({
+          id:          i,
+          name:        item.name,
+          emoji:       EMJ[item.name] || EMJ[item.category] || EMJ.default,
+          weight:      item.quantityGrams || baseWeight(item.name),
+          qty:         1,
+          pricePerItem: item.pricePerItem || 0,
+          category:    item.category || 'Vegetable',
+          reason:      item.reason   || null,
+          nutrients:   item.nutrients || null,
+          ingredient:  map[item.name] || null,
+          bestFor:     map[item.name]?.bestFor || item.name,
+        })))
+      } else {
+        setItems((b.ingredientNames || []).map((name, i) => mkItem(name, i, map)))
+      }
     }).catch(() => {
-      setItems((b.ingredientNames || []).map((name, i) => mkItem(name, i)))
+      if (b.basketItems && b.basketItems.length > 0) {
+        setItems(b.basketItems.map((item, i) => ({
+          id:          i,
+          name:        item.name,
+          emoji:       EMJ[item.name] || EMJ.default,
+          weight:      item.quantityGrams || baseWeight(item.name),
+          qty:         1,
+          pricePerItem: item.pricePerItem || 0,
+          category:    item.category || 'Vegetable',
+          reason:      item.reason   || null,
+          nutrients:   item.nutrients || null,
+          ingredient:  null,
+          bestFor:     item.name,
+        })))
+      } else {
+        setItems((b.ingredientNames || []).map((name, i) => mkItem(name, i)))
+      }
     }).finally(() => setLoading(false))
   }
 
@@ -110,7 +145,8 @@ export default function BasketDetail() {
   const activeItems  = items.filter(it => it.qty > 0)
   const totalWeight  = activeItems.reduce((s, it) => s + it.weight * it.qty, 0)
   const extraItems   = activeItems.filter(it => !(basket.ingredientNames || []).includes(it.name))
-  const extraCost    = extraItems.reduce((s, it) => s + calcItemPrice(it.name, it.weight * it.qty), 0)
+  // Extra items (user-added from catalog) use calcItemPrice; base items already have pricePerItem
+  const extraCost    = extraItems.reduce((s, it) => s + (it.pricePerItem ? it.pricePerItem * it.qty : calcItemPrice(it.name, it.weight * it.qty)), 0)
   const displayPrice = Math.max(basket.price || 99, (basket.price || 0) + extraCost)
   const addedNames   = items.map(it => it.name)
   const isCustomized = activeItems.length !== (basket.ingredientNames?.length || 0) || extraCost > 0
@@ -178,7 +214,7 @@ export default function BasketDetail() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{it.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 5 }}>
-                        {it.weight}g · ₹{calcItemPrice(it.name, it.weight)}
+                        {it.weight}g · ₹{it.pricePerItem || calcItemPrice(it.name, it.weight)}
                         {it.ingredient?.glycemic?.gi && (
                           <span style={{ marginLeft: 6, background: '#F1F8E9', color: '#33691E', padding: '1px 6px', borderRadius: 50, fontSize: 10, fontWeight: 600 }}>GI {it.ingredient.glycemic.gi}</span>
                         )}
@@ -186,7 +222,7 @@ export default function BasketDetail() {
                       <WellnessBadge ingredient={it.ingredient || { bestFor: it.bestFor, name: it.name }} max={2} size="sm" />
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13 }}>₹{calcItemPrice(it.name, it.weight)}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13 }}>₹{it.pricePerItem || calcItemPrice(it.name, it.weight)}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-light)' }}>/{it.weight}g</div>
                     </div>
                   </div>

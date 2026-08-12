@@ -10,7 +10,17 @@ const EMJ = {
 }
 const CATS = ['All','Vegetable','Leafy Vegetables','Fruits']
 
-const PRICE_100G = {
+// Runtime price map — populated from DB products via setPriceMap()
+// Falls back to hardcoded defaults if product not found
+let _priceMap = {}
+export function setPriceMap(products) {
+  _priceMap = {}
+  ;(products || []).forEach(p => {
+    if (p.name && p.pricePer100g) _priceMap[p.name] = p.pricePer100g
+  })
+}
+
+const PRICE_100G_FALLBACK = {
   Spinach:8,Beetroot:6,Broccoli:18,Carrot:7,Cucumber:5,Tomato:6,Capsicum:14,
   Amla:10,Guava:8,Pomegranate:20,'Drumstick Leaves':12,Amaranth:10,
   'Sunflower Microgreens':35,'Curry leaves':20,'Mint leaves':15,
@@ -19,8 +29,9 @@ const PRICE_100G = {
   'French beans':12,'Bitter Gourd':10,'Raw papaya':8,'Drumstick':8,
   default:10,
 }
-export function calcItemPrice(name, grams) {
-  const p = PRICE_100G[name] || PRICE_100G.default
+export function calcItemPrice(name, grams, product) {
+  // Priority: product.pricePer100g → runtime map → hardcoded fallback
+  const p = product?.pricePer100g || _priceMap[name] || PRICE_100G_FALLBACK[name] || PRICE_100G_FALLBACK.default
   return Math.max(5, Math.round((p * grams) / 100))
 }
 
@@ -50,9 +61,11 @@ export default function ProductCatalog({ visible, onClose, onAdd, addedNames = [
 
   const loadAll = async () => {
     try {
-      const d = await api.getIngredients({ limit: 141, page: 1 })
-      setAll(d.ingredients || [])
-      setIngs(d.ingredients || [])
+      const d = await api.getIngredients({ limit: 200, page: 1 })
+      const products = d.ingredients || d.products || []
+      setPriceMap(products)   // populate runtime price map from DB
+      setAll(products)
+      setIngs(products)
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -126,8 +139,8 @@ export default function ProductCatalog({ visible, onClose, onAdd, addedNames = [
           ) : ings.length === 0 ? (
             <div style={{ textAlign:'center', padding:'32px 0', color:'var(--text-light)' }}>No ingredients found</div>
           ) : ings.map(ing => {
-            const w    = baseWeight(ing.name)
-            const price = calcItemPrice(ing.name, w)
+            const w    = ing.typicalServingG || baseWeight(ing.name)
+            const price = calcItemPrice(ing.name, w, ing)
             const added = addedNames.includes(ing.name)
             const emoji = EMJ[ing.category] || EMJ.default
 
