@@ -296,7 +296,26 @@ export default function Setup() {
       rule = matchingRules.find(r => r.ageCategory === 'Adult')
           || matchingRules.find(r => !r.ageCategory || r.ageCategory === 'All')
     }
-    return rule?.recommendedWellnessGoal || null
+    const goal = rule?.recommendedWellnessGoal || null
+    if (!goal) return null
+
+    // Safety guard — never recommend age-restricted goals to wrong age group
+    const AGE_RESTRICTED_GOALS = {
+      'Senior Wellness':  { min: 60 },
+      'Healthy Ageing':   { min: 60 },
+      'Premature Ageing': { min: 60 },
+      'Aging Well':       { min: 60 },
+      'Kids Nutrition':   { max: 18 },
+    }
+    const restriction = AGE_RESTRICTED_GOALS[goal]
+    if (restriction) {
+      const age = ageOf(dob)
+      if (age !== null) {
+        if (restriction.min && age < restriction.min) return null
+        if (restriction.max && age > restriction.max) return null
+      }
+    }
+    return goal
   }
 
   /* ─── Products split by category ─── */
