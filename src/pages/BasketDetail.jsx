@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { showToast } from '../components/Toast'
@@ -28,6 +28,227 @@ function mkItem(name, idx, catalogMap = {}) {
     ingredient: cat || null,
     bestFor:    cat?.bestFor || name,
   }
+}
+
+/* ── Nutrient display config ── */
+const NUTRIENT_CONFIG = [
+  { key: 'calories',  label: 'Calories',   unit: 'kcal', icon: '🔥', color: '#E65100' },
+  { key: 'protein',   label: 'Protein',    unit: 'g',    icon: '💪', color: '#1565C0' },
+  { key: 'fibre',     label: 'Fibre',      unit: 'g',    icon: '🌾', color: '#2D6A35' },
+  { key: 'carbs',     label: 'Carbs',      unit: 'g',    icon: '🍚', color: '#F9A825' },
+  { key: 'fat',       label: 'Fat',        unit: 'g',    icon: '🫒', color: '#6D4C41' },
+  { key: 'iron',      label: 'Iron',       unit: 'mg',   icon: '🩸', color: '#B71C1C' },
+  { key: 'calcium',   label: 'Calcium',    unit: 'mg',   icon: '🦴', color: '#0277BD' },
+  { key: 'potassium', label: 'Potassium',  unit: 'mg',   icon: '🍌', color: '#558B2F' },
+  { key: 'vitaminC',  label: 'Vitamin C',  unit: 'mg',   icon: '🍊', color: '#EF6C00' },
+  { key: 'vitaminA',  label: 'Vitamin A',  unit: 'µg',   icon: '👁️',  color: '#7B1FA2' },
+  { key: 'magnesium', label: 'Magnesium',  unit: 'mg',   icon: '⚡', color: '#00838F' },
+  { key: 'zinc',      label: 'Zinc',       unit: 'mg',   icon: '🔬', color: '#4527A0' },
+]
+
+// Goal → which nutrients to highlight in coverage
+const GOAL_COVERAGE_KEYS = {
+  'General Wellness':    ['calories','protein','fibre','vitaminC','iron'],
+  'Weight Loss':         ['calories','protein','fibre','fat'],
+  'Weight Gain':         ['calories','protein','carbs','fat'],
+  'Build Muscle':        ['protein','calories','carbs'],
+  'Blood Sugar Control': ['fibre','calories','carbs','protein'],
+  'Heart Health':        ['potassium','fibre','fat','calories'],
+  'Iron Support':        ['iron','vitaminC','protein','calcium'],
+  'Digestive Wellness':  ['fibre','calories','protein'],
+  'Immunity Nutrition':  ['vitaminC','vitaminA','iron','zinc'],
+  'Bone Health':         ['calcium','magnesium','protein','vitaminD'],
+  'Hypertension Support':['potassium','fibre','fat','calories'],
+  'PCOS Support':        ['fibre','iron','protein','calories'],
+  'Pregnancy Nutrition': ['iron','calcium','protein','vitaminA'],
+  'Healthy Ageing':      ['calcium','protein','fibre','vitaminC'],
+  'Fatty Liver Support': ['fibre','fat','protein','calories'],
+  'Thyroid Support':     ['protein','fibre','zinc','calories'],
+  'default':             ['calories','protein','fibre','iron','calcium','vitaminC'],
+}
+
+function getCoverageKeys(goals = []) {
+  for (const g of goals) {
+    if (GOAL_COVERAGE_KEYS[g]) return GOAL_COVERAGE_KEYS[g]
+  }
+  return GOAL_COVERAGE_KEYS['default']
+}
+
+function coverageColor(pct) {
+  if (pct >= 90)  return '#2D6A35'
+  if (pct >= 70)  return '#F9A825'
+  return '#E53935'
+}
+
+/* ── Coverage Section ── */
+function CoverageSection({ basket }) {
+  const coverage  = basket.coveragePercent || {}
+  const targets   = basket.targets         || {}
+  const achieved  = basket.totalNutrition  || {}
+  const goals     = basket.goals           || []
+
+  const keys = getCoverageKeys(goals).filter(k => coverage[k] !== undefined && targets[k] > 0)
+  if (!keys.length) return null
+
+  return (
+    <div style={{ padding: '14px 18px 4px' }}>
+      <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+        Weekly Nutritional Coverage
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 12, lineHeight: 1.4 }}>
+        How much of your weekly targets this basket provides
+        {goals.length > 0 && <span> · Based on <b style={{ color: 'var(--green)' }}>{goals[0]}</b></span>}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {keys.map(k => {
+          const cfg  = NUTRIENT_CONFIG.find(n => n.key === k)
+          if (!cfg) return null
+          const rawPct  = parseFloat(coverage[k] || 0)
+          const pct     = Math.min(rawPct, 130) // cap bar at 130%
+          const barW    = Math.min(pct, 100)
+          const tgt     = targets[k]   ? +targets[k].toFixed(1)   : null
+          const ach     = achieved[k]  ? +achieved[k].toFixed(1)  : null
+          const clr     = coverageColor(rawPct)
+          return (
+            <div key={k}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{cfg.label}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {ach !== null && tgt !== null && (
+                    <span style={{ fontSize: 11, color: 'var(--text-light)' }}>
+                      {ach}{cfg.unit} / {tgt}{cfg.unit}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 12, fontWeight: 800, color: clr, minWidth: 38, textAlign: 'right' }}>
+                    {rawPct.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: 8, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 99,
+                  width: `${barW}%`,
+                  background: rawPct >= 90
+                    ? `linear-gradient(90deg, ${clr}, ${clr}CC)`
+                    : rawPct >= 70
+                    ? `linear-gradient(90deg, #F9A825, #FFD54F)`
+                    : `linear-gradient(90deg, #E53935, #EF9A9A)`,
+                  transition: 'width 0.6s ease',
+                }} />
+              </div>
+              {rawPct > 100 && (
+                <div style={{ fontSize: 10, color: '#558B2F', marginTop: 3, fontWeight: 600 }}>
+                  ✓ Exceeds target — great coverage!
+                </div>
+              )}
+            </div>
+          )
+        })}
+        <div style={{ fontSize: 10, color: 'var(--text-light)', borderTop: '1px solid var(--border)', paddingTop: 10, lineHeight: 1.5 }}>
+          💡 Coverage shown for your weekly basket based on your plan type. 90%+ is excellent.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Per-product Nutrition Row ── */
+function ProductNutritionRow({ item, isLast }) {
+  const [open, setOpen] = useState(false)
+  const n = item.nutrients
+
+  // Which macros to always show
+  const macros = [
+    { key: 'calories', label: 'Cal',     unit: 'kcal' },
+    { key: 'protein',  label: 'Protein', unit: 'g'    },
+    { key: 'carbs',    label: 'Carbs',   unit: 'g'    },
+    { key: 'fat',      label: 'Fat',     unit: 'g'    },
+    { key: 'fibre',    label: 'Fibre',   unit: 'g'    },
+  ]
+  // Micros — only show if > 0
+  const micros = n ? [
+    { key: 'iron',      label: 'Iron',      unit: 'mg' },
+    { key: 'calcium',   label: 'Calcium',   unit: 'mg' },
+    { key: 'potassium', label: 'Potassium', unit: 'mg' },
+    { key: 'vitaminC',  label: 'Vit C',     unit: 'mg' },
+    { key: 'vitaminA',  label: 'Vit A',     unit: 'µg' },
+    { key: 'magnesium', label: 'Mg',        unit: 'mg' },
+    { key: 'zinc',      label: 'Zinc',      unit: 'mg' },
+  ].filter(m => n[m.key] > 0) : []
+
+  return (
+    <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+      {/* Main row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 16px' }}>
+        <div style={{ width: 48, height: 48, background: 'var(--green-pale)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+          {item.emoji}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{item.name}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 4 }}>
+            {item.weight}g · ₹{item.pricePerItem || calcItemPrice(item.name, item.weight)}
+            {item.ingredient?.glycemic?.gi && (
+              <span style={{ marginLeft: 6, background: '#F1F8E9', color: '#33691E', padding: '1px 6px', borderRadius: 50, fontSize: 10, fontWeight: 600 }}>GI {item.ingredient.glycemic.gi}</span>
+            )}
+          </div>
+          {item.reason && (
+            <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, lineHeight: 1.4, marginBottom: 4 }}>
+              {item.reason}
+            </div>
+          )}
+          <WellnessBadge ingredient={item.ingredient || { bestFor: item.bestFor, name: item.name }} max={2} size="sm" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+          <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13 }}>₹{item.pricePerItem || calcItemPrice(item.name, item.weight)}</div>
+          {n && (
+            <button
+              onClick={() => setOpen(o => !o)}
+              style={{ background: open ? 'var(--green)' : 'var(--bg)', border: `1px solid ${open ? 'var(--green)' : 'var(--border)'}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: open ? '#fff' : 'var(--text-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+              Nutrition {open ? '▲' : '▼'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Expandable nutrition panel */}
+      {open && n && (
+        <div style={{ background: 'var(--green-pale)', margin: '0 12px 12px', borderRadius: 12, padding: '12px 14px' }}>
+          {/* Macros row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: micros.length ? 10 : 0 }}>
+            {macros.map(m => (
+              <div key={m.key} style={{ textAlign: 'center', background: '#fff', borderRadius: 10, padding: '8px 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', lineHeight: 1 }}>
+                  {n[m.key] != null ? +n[m.key].toFixed(1) : '–'}
+                </div>
+                <div style={{ fontSize: 9, color: 'var(--text-light)', marginTop: 3, lineHeight: 1 }}>{m.label}</div>
+                <div style={{ fontSize: 9, color: 'var(--text-light)', lineHeight: 1 }}>{m.unit}</div>
+              </div>
+            ))}
+          </div>
+          {/* Micros — only non-zero */}
+          {micros.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Micronutrients</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {micros.map(m => (
+                  <div key={m.key} style={{ background: '#fff', borderRadius: 8, padding: '5px 10px', display: 'flex', gap: 4, alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{+n[m.key].toFixed(1)}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-light)' }}>{m.unit}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-mid)', fontWeight: 600 }}>{m.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <div style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 8 }}>Per {item.weight}g serving</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function BasketDetail() {
@@ -202,30 +423,18 @@ export default function BasketDetail() {
               </div>
             </div>
 
+            {/* Goal Nutrient Coverage */}
+            <CoverageSection basket={basket} />
+
             {/* What's Inside */}
             <div style={{ padding: '14px 18px' }}>
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600, marginBottom: 12 }}>What's Inside</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600 }}>What's Inside</div>
+                <span style={{ fontSize: 11, color: 'var(--text-light)' }}>{items.length} items</span>
+              </div>
               <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
                 {items.map((it, i) => (
-                  <div key={it.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 16px', borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                    <div style={{ width: 48, height: 48, background: 'var(--green-pale)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
-                      {it.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{it.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 5 }}>
-                        {it.weight}g · ₹{it.pricePerItem || calcItemPrice(it.name, it.weight)}
-                        {it.ingredient?.glycemic?.gi && (
-                          <span style={{ marginLeft: 6, background: '#F1F8E9', color: '#33691E', padding: '1px 6px', borderRadius: 50, fontSize: 10, fontWeight: 600 }}>GI {it.ingredient.glycemic.gi}</span>
-                        )}
-                      </div>
-                      <WellnessBadge ingredient={it.ingredient || { bestFor: it.bestFor, name: it.name }} max={2} size="sm" />
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13 }}>₹{it.pricePerItem || calcItemPrice(it.name, it.weight)}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-light)' }}>/{it.weight}g</div>
-                    </div>
-                  </div>
+                  <ProductNutritionRow key={it.id} item={it} isLast={i === items.length - 1} />
                 ))}
               </div>
             </div>
