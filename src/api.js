@@ -58,6 +58,7 @@ export const api = {
   getCities: () => req('GET', '/delivery/cities'),
   // Setup data — new kp_* collections
   getActivityLevels:   () => req('GET', '/setup/activity-levels'),
+  getPlanTypes:        () => req('GET', '/setup/plan-types'),
   getLifestyleCodes:   () => req('GET', '/setup/lifestyle-codes'),
   getHealthConditions: () => req('GET', '/setup/health-conditions'),
   getAllergies:         () => req('GET', '/setup/allergies'),
