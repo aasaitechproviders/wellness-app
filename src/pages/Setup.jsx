@@ -198,7 +198,11 @@ export default function Setup() {
   const [allergyList,     setAllergyList]    = useState([])
   const [bmiRules,        setBmiRules]       = useState([])
   const [wellnessGoals,   setWellnessGoals]  = useState([])
-  const [planTypes,       setPlanTypes]      = useState([])
+  const [planTypes,       setPlanTypes]      = useState([
+    { planCode: 'T20', planName: 'Basic Plan',    coveragePct: 30, description: 'Covers 30% of your weekly nutritional targets — light supplementation' },
+    { planCode: 'T30', planName: 'Standard Plan', coveragePct: 40, description: 'Covers 40% of your weekly nutritional targets — balanced coverage' },
+    { planCode: 'T40', planName: 'Premium Plan',  coveragePct: 50, description: 'Covers 50% of your weekly nutritional targets — comprehensive nutrition' },
+  ])
   const [products,        setProducts]       = useState([])
 
   /* ── Form states (populated after fresh fetch) ── */
@@ -1012,7 +1016,7 @@ export default function Setup() {
             ))}
 
             {/* Wellness Plan — per member, from DB */}
-            {planTypes.length > 0 && members.map((m,i) => (
+            {members.map((m,i) => (
               <div key={`plan-${m.memberId}`} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
                 <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
                   <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
