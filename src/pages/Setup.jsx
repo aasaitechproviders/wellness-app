@@ -243,7 +243,7 @@ export default function Setup() {
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
     api.getBmiRules().then(d => setBmiRules(d.bmiRules||[])).catch(()=>{})
     api.getWellnessGoals().then(d => setWellnessGoals(d.goals||[])).catch(()=>{})
-    api.getPlanTypes().then(d => setPlanTypes(d.planTypes||[])).catch(()=>{})
+    api.getPlanTypes().then(d => { if(d.planTypes?.length) setPlanTypes(d.planTypes) }).catch(()=>{})
     api.getProducts({limit:500}).then(d => setProducts(d.products||[])).catch(()=>{})
 
     if (!family?._id) { setInitDone(true); return }
@@ -988,6 +988,70 @@ export default function Setup() {
               )
             })}
 
+            {/* Wellness Plan — per member, from DB */}
+            {members.map((m,i) => (
+              <div key={`plan-${m.memberId}`} style={{background:'#fff',border:'2px solid var(--green)',borderRadius:16,overflow:'hidden'}}>
+                <div style={{background:'var(--green)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:32,height:32,flexShrink:0,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,color:'#fff'}}>
+                    {m.name?initials(m.name):(i+1)}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14,color:'#fff'}}>{m.name||`Member ${i+1}`} — Choose Your Plan</div>
+                    <div style={{fontSize:11,color:'rgba(255,255,255,0.8)'}}>How much of weekly nutrition this basket covers</div>
+                  </div>
+                  <span style={{fontSize:20}}>📋</span>
+                </div>
+                <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+                  {planTypes.map((pt,ptIdx) => {
+                    const code = (pt.planCode||'').toUpperCase()
+                    const sel  = (m.preferredPlan||'T20') === code
+                    const pct  = pt.coveragePct || Math.round((pt.coverageFraction||0)*100)
+                    const name = pt.planName || pt.displayName || code
+                    const desc = pt.description || pt.planDescription || ''
+                    const palettes = [
+                      { accent:'#2D6A35', bg:'#F1F8F2' },
+                      { accent:'#1565C0', bg:'#EBF5FF' },
+                      { accent:'#6A1B9A', bg:'#F9F0FB' },
+                    ]
+                    const pal = palettes[ptIdx % palettes.length]
+                    return (
+                      <button key={code} type="button" onClick={()=>setMember(i,'preferredPlan',code)}
+                        style={{display:'flex',alignItems:'center',gap:14,padding:'14px',borderRadius:14,
+                          border:`2px solid ${sel ? pal.accent : 'var(--border)'}`,
+                          background: sel ? pal.bg : '#fff',
+                          cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}>
+                        <div style={{width:56,height:56,flexShrink:0,borderRadius:12,
+                          background: sel ? pal.accent : '#F5F5F5',
+                          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1}}>
+                          <span style={{fontSize:16,fontWeight:800,color:sel?'#fff':'#888',lineHeight:1}}>{pct}%</span>
+                          <span style={{fontSize:9,color:sel?'rgba(255,255,255,0.8)':'#aaa',fontWeight:600,letterSpacing:.3}}>cover</span>
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                            <span style={{fontWeight:800,fontSize:15,color:sel?pal.accent:'var(--text)'}}>{name}</span>
+                            <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,
+                              background:sel?pal.accent:'#eee',
+                              color:sel?'#fff':'#888'}}>{code}</span>
+                          </div>
+                          {desc && <div style={{fontSize:12,color:'var(--text-light)',lineHeight:1.4}}>{desc}</div>}
+                        </div>
+                        <div style={{width:26,height:26,flexShrink:0,borderRadius:'50%',
+                          border:`2px solid ${sel?pal.accent:'var(--border)'}`,
+                          background:sel?pal.accent:'#fff',
+                          display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          {sel && <span style={{color:'#fff',fontSize:14,fontWeight:800}}>✓</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                  <div style={{fontSize:11,color:'var(--text-light)',padding:'2px 2px',lineHeight:1.5,display:'flex',gap:6,alignItems:'flex-start'}}>
+                    <span>💡</span>
+                    <span>Your basket will include fresh produce covering this % of your daily nutritional targets. You can add extra items anytime.</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+
             {/* Diet Type — per member */}
             {members.map((m,i)=>(
               <div key={`diet-${m.memberId}`} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
@@ -1011,64 +1075,6 @@ export default function Setup() {
                       {m.dietType===d.id&&<span style={{marginLeft:'auto',color:'var(--green)',fontSize:18}}>✓</span>}
                     </button>
                   ))}
-                </div>
-              </div>
-            ))}
-
-            {/* Wellness Plan — per member, from DB */}
-            {members.map((m,i) => (
-              <div key={`plan-${m.memberId}`} style={{background:'#fff',border:'1.5px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
-                <div style={{background:'var(--green-pale)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10}}>
-                  <div className="avatar" style={{background:acolor(i),width:32,height:32,fontSize:11,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>
-                    {m.name?initials(m.name):(i+1)}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:14,color:'var(--green)'}}>{m.name||`Member ${i+1}`} — Wellness Plan</div>
-                    <div style={{fontSize:11,color:'var(--text-light)'}}>How much of your weekly nutrition this basket covers</div>
-                  </div>
-                </div>
-                <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
-                  {planTypes.map((pt,ptIdx) => {
-                    const code = (pt.planCode||'').toUpperCase()
-                    const sel  = (m.preferredPlan||'T20') === code
-                    const pct  = pt.coveragePct || Math.round((pt.coverageFraction||0)*100)
-                    const name = pt.planName || pt.displayName || code
-                    const desc = pt.description || pt.planDescription || ''
-                    const palettes = [
-                      { border:'#2D6A35', bg:'#F1F8F2', accent:'#2D6A35' },
-                      { border:'#1565C0', bg:'#EBF5FF', accent:'#1565C0' },
-                      { border:'#6A1B9A', bg:'#F9F0FB', accent:'#6A1B9A' },
-                    ]
-                    const pal = palettes[ptIdx % palettes.length]
-                    return (
-                      <button key={code} type="button" onClick={()=>setMember(i,'preferredPlan',code)}
-                        style={{display:'flex',alignItems:'flex-start',gap:14,padding:'14px',borderRadius:14,
-                          border:`2px solid ${sel ? pal.accent : 'var(--border)'}`,
-                          background: sel ? pal.bg : '#fff',
-                          cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}>
-                        <div style={{width:52,height:52,flexShrink:0,borderRadius:12,
-                          background: sel ? pal.accent : 'var(--bg)',
-                          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1}}>
-                          <span style={{fontSize:15,fontWeight:800,color:sel?'#fff':'var(--text-mid)',lineHeight:1}}>{pct}%</span>
-                          <span style={{fontSize:9,color:sel?'rgba(255,255,255,0.75)':'var(--text-light)',fontWeight:600,letterSpacing:.3}}>cover</span>
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                            <span style={{fontWeight:800,fontSize:14,color:sel?pal.accent:'var(--text)'}}>{name}</span>
-                            <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20,
-                              background:sel?pal.accent:'var(--bg)',
-                              color:sel?'#fff':'var(--text-light)',border:`1px solid ${sel?pal.accent:'var(--border)'}`}}>{code}</span>
-                          </div>
-                          {desc && <div style={{fontSize:12,color:'var(--text-light)',lineHeight:1.4}}>{desc}</div>}
-                        </div>
-                        {sel && <span style={{color:pal.accent,fontSize:18,flexShrink:0}}>✓</span>}
-                      </button>
-                    )
-                  })}
-                  <div style={{fontSize:11,color:'var(--text-light)',padding:'2px 2px',lineHeight:1.5,display:'flex',gap:6,alignItems:'flex-start'}}>
-                    <span>💡</span>
-                    <span>Your weekly basket will include fresh produce covering this % of your daily nutritional targets. Extra items can always be added.</span>
-                  </div>
                 </div>
               </div>
             ))}
