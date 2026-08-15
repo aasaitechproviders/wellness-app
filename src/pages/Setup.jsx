@@ -203,6 +203,11 @@ export default function Setup() {
     { planCode: 'T30', planName: 'Standard Plan', coveragePct: 40, description: 'Covers 40% of your weekly nutritional targets — balanced coverage' },
     { planCode: 'T40', planName: 'Premium Plan',  coveragePct: 50, description: 'Covers 50% of your weekly nutritional targets — comprehensive nutrition' },
   ])
+  const [subPlans,        setSubPlans]       = useState([
+    { id:'weekly',   planName:'Weekly Plan',    days:7,  price:699,  per:'/week',    icon:'🌱', desc:'Fresh delivery every week' },
+    { id:'biweekly', planName:'Bi-Weekly Plan', days:15, price:1299, per:'/15 days', icon:'🌿', desc:'Twice-monthly wellness basket' },
+    { id:'monthly',  planName:'Monthly Plan',   days:30, price:2399, per:'/month',   icon:'🍃', desc:'Best value for your family' },
+  ])
   const [products,        setProducts]       = useState([])
 
   /* ── Form states (populated after fresh fetch) ── */
@@ -212,6 +217,7 @@ export default function Setup() {
     apartmentId:'' , apartmentName:'',
     tower:''       , flat:''      , landmark:'', pincode:'',
     deliveryPreference:'Morning',
+    preferredSubscription: 'weekly',
   })
   const [members,        setMembers]       = useState([blankMember()])
 
@@ -229,6 +235,7 @@ export default function Setup() {
       landmark:     f.landmark      || '',
       pincode:      f.pincode       || '',
       deliveryPreference: f.deliveryPreference || 'Morning',
+      preferredSubscription: f.preferredSubscription || 'weekly',
     })
     if (f.members?.length) setMembers(f.members.map(memberFromDB))
   }
@@ -244,6 +251,15 @@ export default function Setup() {
     api.getBmiRules().then(d => setBmiRules(d.bmiRules||[])).catch(()=>{})
     api.getWellnessGoals().then(d => setWellnessGoals(d.goals||[])).catch(()=>{})
     api.getPlanTypes().then(d => { if(d.planTypes?.length) setPlanTypes(d.planTypes) }).catch(()=>{})
+    api.getPlans().then(d => { if(d.plans?.length) setSubPlans(d.plans.map(p => ({
+      id: p.planId || p._id?.toString(),
+      planName: p.planName,
+      days: p.duration || (p.planName?.toLowerCase().includes('month') ? 30 : p.planName?.toLowerCase().includes('bi') ? 15 : 7),
+      price: p.price || 699,
+      per: p.planName?.toLowerCase().includes('month') ? '/month' : p.planName?.toLowerCase().includes('bi') ? '/15 days' : '/week',
+      icon: p.planName?.toLowerCase().includes('month') ? '🍃' : p.planName?.toLowerCase().includes('bi') ? '🌿' : '🌱',
+      desc: p.description || '',
+    }))) }).catch(()=>{})
     api.getProducts({limit:500}).then(d => setProducts(d.products||[])).catch(()=>{})
 
     if (!family?._id) { setInitDone(true); return }
@@ -354,6 +370,7 @@ export default function Setup() {
         landmark:      form0.landmark || null,
         pincode:       form0.pincode  || null,
         deliveryPreference: form0.deliveryPreference || 'Morning',
+        preferredSubscription: form0.preferredSubscription || 'weekly',
         address:       [form0.aptName, form0.flat&&`Flat ${form0.flat}`, form0.tower&&`Tower ${form0.tower}`].filter(Boolean).join(', '),
       }
       const r = await api.updateFamily(family._id, body)
@@ -598,6 +615,54 @@ export default function Setup() {
                   {form0.deliveryPreference===s.v&&<span>✓</span>}
                 </button>
               ))}
+            </div>
+
+            {/* Subscription Plan — account level */}
+            <SecH emoji="📦" title="Delivery Frequency"/>
+            <div style={{fontSize:12,color:'var(--text-light)',marginBottom:4,lineHeight:1.5}}>
+              How often would you like your wellness basket delivered? You can change this anytime.
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {subPlans.map((p,idx) => {
+                const selId = form0.preferredSubscription
+                const isWeekly   = p.planName?.toLowerCase().includes('week') && !p.planName?.toLowerCase().includes('bi')
+                const isBiweekly = p.planName?.toLowerCase().includes('bi')
+                const isMonthly  = p.planName?.toLowerCase().includes('month')
+                const matchId    = p.id || (isWeekly ? 'weekly' : isBiweekly ? 'biweekly' : 'monthly')
+                const sel        = selId === matchId
+                const palettes   = [
+                  { accent:'#2D6A35', bg:'#F1F8F2' },
+                  { accent:'#1565C0', bg:'#EBF5FF' },
+                  { accent:'#6A1B9A', bg:'#F9F0FB' },
+                ]
+                const pal = palettes[idx % palettes.length]
+                return (
+                  <button key={matchId} type="button" onClick={()=>setForm0(pr=>({...pr,preferredSubscription:matchId}))}
+                    style={{display:'flex',alignItems:'center',gap:14,padding:'14px',borderRadius:14,
+                      border:`2px solid ${sel?pal.accent:'var(--border)'}`,
+                      background:sel?pal.bg:'#fff',cursor:'pointer',textAlign:'left',width:'100%'}}>
+                    <div style={{width:46,height:46,flexShrink:0,borderRadius:12,
+                      background:sel?pal.accent:'var(--bg)',
+                      display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>
+                      <span>{p.icon||'📦'}</span>
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:800,fontSize:14,color:sel?pal.accent:'var(--text)',marginBottom:2}}>{p.planName}</div>
+                      <div style={{fontSize:12,color:'var(--text-light)'}}>{p.desc||`Every ${p.days} days`}</div>
+                    </div>
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      {p.price && <div style={{fontWeight:800,fontSize:15,color:sel?pal.accent:'var(--text)'}}>₹{p.price}</div>}
+                      {p.per   && <div style={{fontSize:10,color:'var(--text-light)'}}>{p.per}</div>}
+                    </div>
+                    <div style={{width:22,height:22,flexShrink:0,borderRadius:'50%',
+                      border:`2px solid ${sel?pal.accent:'var(--border)'}`,
+                      background:sel?pal.accent:'#fff',
+                      display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      {sel&&<span style={{color:'#fff',fontSize:12,fontWeight:800}}>✓</span>}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

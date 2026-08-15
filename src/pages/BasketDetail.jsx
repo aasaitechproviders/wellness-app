@@ -48,23 +48,23 @@ const NUTRIENT_CONFIG = [
 
 // Goal → which nutrients to highlight in coverage
 const GOAL_COVERAGE_KEYS = {
-  'General Wellness':    ['calories','protein','fibre','vitaminC','iron'],
-  'Weight Loss':         ['calories','protein','fibre','fat'],
+  'General Wellness':    ['calories','protein','fibre','fat','vitaminC','iron'],
+  'Weight Loss':         ['calories','protein','fibre','fat','carbs'],
   'Weight Gain':         ['calories','protein','carbs','fat'],
-  'Build Muscle':        ['protein','calories','carbs'],
-  'Blood Sugar Control': ['fibre','calories','carbs','protein'],
-  'Heart Health':        ['potassium','fibre','fat','calories'],
-  'Iron Support':        ['iron','vitaminC','protein','calcium'],
-  'Digestive Wellness':  ['fibre','calories','protein'],
-  'Immunity Nutrition':  ['vitaminC','vitaminA','iron','zinc'],
-  'Bone Health':         ['calcium','magnesium','protein','vitaminD'],
-  'Hypertension Support':['potassium','fibre','fat','calories'],
-  'PCOS Support':        ['fibre','iron','protein','calories'],
-  'Pregnancy Nutrition': ['iron','calcium','protein','vitaminA'],
-  'Healthy Ageing':      ['calcium','protein','fibre','vitaminC'],
-  'Fatty Liver Support': ['fibre','fat','protein','calories'],
-  'Thyroid Support':     ['protein','fibre','zinc','calories'],
-  'default':             ['calories','protein','fibre','iron','calcium','vitaminC'],
+  'Build Muscle':        ['calories','protein','carbs','fat'],
+  'Blood Sugar Control': ['calories','fibre','carbs','protein','fat'],
+  'Heart Health':        ['calories','potassium','fibre','fat','protein'],
+  'Iron Support':        ['calories','iron','vitaminC','protein','calcium'],
+  'Digestive Wellness':  ['calories','fibre','protein','fat'],
+  'Immunity Nutrition':  ['calories','vitaminC','vitaminA','iron','zinc'],
+  'Bone Health':         ['calories','calcium','magnesium','protein'],
+  'Hypertension Support':['calories','potassium','fibre','fat'],
+  'PCOS Support':        ['calories','fibre','iron','protein','fat'],
+  'Pregnancy Nutrition': ['calories','iron','calcium','protein','vitaminA'],
+  'Healthy Ageing':      ['calories','calcium','protein','fibre','vitaminC'],
+  'Fatty Liver Support': ['calories','fibre','fat','protein'],
+  'Thyroid Support':     ['calories','protein','fibre','zinc'],
+  'default':             ['calories','protein','fibre','fat','iron','calcium','vitaminC'],
 }
 
 function getCoverageKeys(goals = []) {
@@ -345,8 +345,8 @@ export default function BasketDetail() {
   }
 
   const goToReview = () => {
-    nav('/review-order', {
-      state: { basket: { ...basket, price: displayPrice }, items: activeItems, plan: state?.plan }
+    nav('/plans', {
+      state: { basket: { ...basket, price: displayPrice }, items: activeItems, result: state?.result }
     })
   }
 

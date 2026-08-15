@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../api'
+import { useAuth } from '../context/AuthContext'
 
 const PLANS = [
   { id:'weekly',   name:'Weekly Plan',    days:7,  price:699,  per:'/week',    icon:'🌱', desc:'Fresh delivery every week' },
@@ -11,7 +12,8 @@ const PLANS = [
 export default function Plans() {
   const nav = useNavigate()
   const { state } = useLocation()
-  const [sel, setSel]         = useState('weekly')
+  const { family } = useAuth()
+  const [sel, setSel] = useState(family?.preferredSubscription || 'weekly')
   const [dbPlans, setDbPlans] = useState([])
 
   useEffect(() => { api.getPlans().then(d => setDbPlans(d.plans || [])) }, [])
@@ -28,8 +30,15 @@ export default function Plans() {
 
   const go = () => {
     const plan   = plans.find(p => p.id === sel)
-    const basket = state?.basket || state?.result?.baskets?.[0] || null
-    nav('/basket-detail', { state: { basket, plan } })
+    const basket = state?.basket || null
+    const result = state?.result || null
+    if (basket) {
+      // Coming from BasketDetail — basket already chosen, go to review
+      nav('/review-order', { state: { basket: { ...basket }, items: state?.items, plan } })
+    } else {
+      // Coming from Recommend — show basket first
+      nav('/basket-detail', { state: { basket: result?.baskets?.[0] || null, plan, result } })
+    }
   }
 
   return (
