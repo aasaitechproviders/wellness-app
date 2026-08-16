@@ -5,7 +5,7 @@ import BottomNav from '../components/BottomNav'
 export default function Confirmed() {
   const nav = useNavigate()
   const { state } = useLocation()
-  const { order, basket, baskets=[], plan, multiBasket } = state || {}
+  const { order, basket, baskets=[], plan, multiBasket, paymentMethod, razorpayPaymentId } = state || {}
   const allBaskets = multiBasket && baskets.length ? baskets : (basket ? [basket] : [])
 
   return (
@@ -56,6 +56,16 @@ export default function Confirmed() {
           {plan    && <Row label="Plan" value={plan.name || plan.planName} />}
           {order.deliveryDate && <Row label="Delivery" value={new Date(order.deliveryDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} />}
           {order.deliverySlot && <Row label="Time" value={order.deliverySlot} />}
+          <Row
+            label="Payment"
+            value={paymentMethod === 'razorpay' ? '✅ Paid Online' : '💵 Cash on Delivery'}
+            bold
+          />
+          {razorpayPaymentId && (
+            <div style={{ fontSize:11, color:'var(--text-light)', marginTop:2, fontFamily:'monospace' }}>
+              Ref: {razorpayPaymentId}
+            </div>
+          )}
         </div>
       )}
 

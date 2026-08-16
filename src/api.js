@@ -54,6 +54,14 @@ export const api = {
   getOrder: (id) => req('GET', `/orders/${id}`),
   cancelOrder: (id) => req('PUT', `/orders/${id}/cancel`),
 
+  // Razorpay Payments
+  getPaymentKey:             ()     => req('GET',  '/payments/key'),
+  createPaymentOrder:        (body) => req('POST', '/payments/order/create', body),
+  verifyPaymentOrder:        (body) => req('POST', '/payments/order/verify', body),
+  createSubscriptionPayment: (body) => req('POST', '/payments/subscription/create', body),
+  verifySubscriptionPayment: (body) => req('POST', '/payments/subscription/verify', body),
+  getPaymentHistory:         ()     => req('GET',  '/payments/history'),
+
   // Delivery
   getCities: () => req('GET', '/delivery/cities'),
   // Setup data — new kp_* collections
