@@ -204,9 +204,9 @@ export default function Setup() {
     { planCode: 'T40', planName: 'Premium Plan',  coveragePct: 50, description: 'Covers 50% of your weekly nutritional targets — comprehensive nutrition' },
   ])
   const [subPlans,        setSubPlans]       = useState([
-    { id:'weekly',   planName:'Weekly Plan',    days:7,  price:699,  per:'/week',    icon:'🌱', desc:'Fresh delivery every week' },
-    { id:'biweekly', planName:'Bi-Weekly Plan', days:15, price:1299, per:'/15 days', icon:'🌿', desc:'Twice-monthly wellness basket' },
-    { id:'monthly',  planName:'Monthly Plan',   days:30, price:2399, per:'/month',   icon:'🍃', desc:'Best value for your family' },
+    { id:'weekly',    planName:'Weekly Plan',        days:7,  freq:'Every 7 days',    icon:'🌱', desc:'Fresh basket delivered every week' },
+    { id:'alternate', planName:'Alternate Days Plan', days:2,  freq:'Alternate Days',  icon:'🌿', desc:'Basket delivered every other day' },
+    { id:'monthly',   planName:'Monthly Plan',        days:30, freq:'Every 30 days',   icon:'🍃', desc:'Monthly wellness basket' },
   ])
   const [products,        setProducts]       = useState([])
 
@@ -252,13 +252,12 @@ export default function Setup() {
     api.getWellnessGoals().then(d => setWellnessGoals(d.goals||[])).catch(()=>{})
     api.getPlanTypes().then(d => { if(d.planTypes?.length) setPlanTypes(d.planTypes) }).catch(()=>{})
     api.getPlans().then(d => { if(d.plans?.length) setSubPlans(d.plans.map(p => ({
-      id: p.planId || p._id?.toString(),
-      planName: p.planName,
-      days: p.duration || (p.planName?.toLowerCase().includes('month') ? 30 : p.planName?.toLowerCase().includes('bi') ? 15 : 7),
-      price: p.price || 699,
-      per: p.planName?.toLowerCase().includes('month') ? '/month' : p.planName?.toLowerCase().includes('bi') ? '/15 days' : '/week',
-      icon: p.planName?.toLowerCase().includes('month') ? '🍃' : p.planName?.toLowerCase().includes('bi') ? '🌿' : '🌱',
-      desc: p.description || '',
+      id:        p.planId || p._id?.toString(),
+      planName:  p.planName,
+      days:      p.durationDays || p.duration || 7,
+      freq:      p.frequencyLabel || p.planName,
+      icon:      p.durationDays >= 28 ? '🍃' : p.durationDays >= 14 ? '🌿' : '🌱',
+      desc:      p.description || '',
     }))) }).catch(()=>{})
     api.getProducts({limit:500}).then(d => setProducts(d.products||[])).catch(()=>{})
 
@@ -648,11 +647,8 @@ export default function Setup() {
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:800,fontSize:14,color:sel?pal.accent:'var(--text)',marginBottom:2}}>{p.planName}</div>
-                      <div style={{fontSize:12,color:'var(--text-light)'}}>{p.desc||`Every ${p.days} days`}</div>
-                    </div>
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      {p.price && <div style={{fontWeight:800,fontSize:15,color:sel?pal.accent:'var(--text)'}}>₹{p.price}</div>}
-                      {p.per   && <div style={{fontSize:10,color:'var(--text-light)'}}>{p.per}</div>}
+                      <div style={{fontSize:12,color:'var(--text-light)'}}>{p.freq || p.desc || `Every ${p.days} days`}</div>
+                      {p.desc && p.freq && <div style={{fontSize:11,color:'var(--text-light)',marginTop:2}}>{p.desc}</div>}
                     </div>
                     <div style={{width:22,height:22,flexShrink:0,borderRadius:'50%',
                       border:`2px solid ${sel?pal.accent:'var(--border)'}`,
