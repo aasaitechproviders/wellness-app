@@ -131,7 +131,7 @@ const blankMember = () => ({
   weight:          '',
   // new fields
   activityLevel:   '',
-  metRange:        '',
+
   lifestyleCode:   [],
   healthConditions:[],
   wellnessGoals:   [],
@@ -161,7 +161,7 @@ const memberFromDB = (m) => ({
   ...m,
   dob:             toDateInput(m.dob),
   activityLevel:   m.activityLevel   || '',
-  metRange:        m.metRange        || '',
+
   lifestyleCode:   Array.isArray(m.lifestyleCode) ? m.lifestyleCode : (m.lifestyleCode ? [m.lifestyleCode] : []),
   wellnessGoals:   Array.isArray(m.wellnessGoals)    ? m.wellnessGoals    : [],
   healthConditions:Array.isArray(m.healthConditions) ? m.healthConditions : [],
@@ -194,7 +194,7 @@ export default function Setup() {
   const [activityLevels,  setActivityLevels] = useState([])
   const [lifestyleCodes,  setLifestyleCodes] = useState([])
   const [healthConditions,setHealthConds]    = useState([])
-  const [metRanges,       setMetRanges]      = useState([])
+
   const [allergyList,     setAllergyList]    = useState([])
   const [bmiRules,        setBmiRules]       = useState([])
   const [wellnessGoals,   setWellnessGoals]  = useState([])
@@ -244,7 +244,7 @@ export default function Setup() {
   useEffect(() => {
     api.getCities().then(d => { if(d.cities?.length) setCities(d.cities) }).catch(()=>{})
     api.getActivityLevels().then(d => setActivityLevels(d.activityLevels||[])).catch(()=>{})
-    api.getMetRanges().then(d => setMetRanges(d.metRanges||[])).catch(()=>{})
+
     api.getLifestyleCodes().then(d => setLifestyleCodes(d.lifestyleCodes||[])).catch(()=>{})
     api.getHealthConditions().then(d => setHealthConds(d.conditions||[])).catch(()=>{})
     api.getAllergies().then(d => setAllergyList(d.allergies||[])).catch(()=>{})
@@ -765,23 +765,6 @@ export default function Setup() {
                           </option>
                         ))}
                       </select>
-                    </div>
-
-                    {/* MET Range — independent self-reported exertion level */}
-                    <div className="field">
-                      <label className="label">MET Range <span className="opt">(self-reported exertion level)</span></label>
-                      <select className="inp no-ico" value={m.metRange}
-                        onChange={e=>setMember(i,'metRange',e.target.value)}>
-                        <option value="">Select MET range…</option>
-                        {metRanges.map(r=>(
-                          <option key={r._id} value={r.name}>{r.name}</option>
-                        ))}
-                      </select>
-                      {m.metRange && metRanges.find(r=>r.name===m.metRange)?.description && (
-                        <div style={{fontSize:11,color:'var(--text-light)',marginTop:5,lineHeight:1.5,padding:'6px 10px',background:'var(--green-pale)',borderRadius:8}}>
-                          {metRanges.find(r=>r.name===m.metRange)?.description}
-                        </div>
-                      )}
                     </div>
 
                     {/* Lifestyle Code — multiselect */}
