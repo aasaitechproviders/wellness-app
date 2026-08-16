@@ -82,75 +82,131 @@ function coverageColor(pct) {
 
 /* ── Coverage Section ── */
 function CoverageSection({ basket }) {
-  const coverage  = basket.coveragePercent || {}
-  const targets   = basket.targets         || {}
-  const achieved  = basket.totalNutrition  || {}
-  const goals     = basket.goals           || []
+  const coverage     = basket.coveragePercent || {}
+  const planTargets  = basket.targets         || {}   // plan-scaled (what basket aims to cover)
+  const fullTargets  = basket.fullTargets     || {}   // 100% weekly need
+  const achieved     = basket.totalNutrition  || {}   // what basket actually has
+  const goals        = basket.goals           || []
+  const planName     = basket.planDisplayName || basket.planType || ''
+  const planPct      = basket.planCoverage    || 0    // e.g. 30, 40, 50
+  const tdee         = basket.adjustedTDEE    || 0
 
-  const keys = getCoverageKeys(goals).filter(k => coverage[k] !== undefined && targets[k] > 0)
+  // All nutrients in order — calories first, then pairs
+  const ALL_KEYS = ['calories','protein','fibre','carbs','fat','iron','calcium','potassium','vitaminC','vitaminA','magnesium','zinc']
+  const keys = ALL_KEYS.filter(k => NUTRIENT_CONFIG.find(n => n.key === k) && (fullTargets[k] > 0 || planTargets[k] > 0))
   if (!keys.length) return null
 
-  return (
-    <div style={{ padding: '14px 18px 4px' }}>
-      <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-        Weekly Nutritional Coverage
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--text-light)', marginBottom: 12, lineHeight: 1.4 }}>
-        How much of your weekly targets this basket provides
-        {goals.length > 0 && <span> · Based on <b style={{ color: 'var(--green)' }}>{goals[0]}</b></span>}
-      </div>
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {keys.map(k => {
-          const cfg  = NUTRIENT_CONFIG.find(n => n.key === k)
-          if (!cfg) return null
-          const rawPct  = parseFloat(coverage[k] || 0)
-          const pct     = Math.min(rawPct, 130) // cap bar at 130%
-          const barW    = Math.min(pct, 100)
-          const tgt     = targets[k]   ? +targets[k].toFixed(1)   : null
-          const ach     = achieved[k]  ? +achieved[k].toFixed(1)  : null
-          const clr     = coverageColor(rawPct)
-          return (
-            <div key={k}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 15 }}>{cfg.icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{cfg.label}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {ach !== null && tgt !== null && (
-                    <span style={{ fontSize: 11, color: 'var(--text-light)' }}>
-                      {ach}{cfg.unit} / {tgt}{cfg.unit}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 12, fontWeight: 800, color: clr, minWidth: 38, textAlign: 'right' }}>
-                    {rawPct.toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-              {/* Progress bar */}
-              <div style={{ height: 8, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: 99,
-                  width: `${barW}%`,
-                  background: rawPct >= 90
-                    ? `linear-gradient(90deg, ${clr}, ${clr}CC)`
-                    : rawPct >= 70
-                    ? `linear-gradient(90deg, #F9A825, #FFD54F)`
-                    : `linear-gradient(90deg, #E53935, #EF9A9A)`,
-                  transition: 'width 0.6s ease',
-                }} />
-              </div>
-              {rawPct > 100 && (
-                <div style={{ fontSize: 10, color: '#558B2F', marginTop: 3, fontWeight: 600 }}>
-                  ✓ Exceeds target — great coverage!
-                </div>
-              )}
-            </div>
-          )
-        })}
-        <div style={{ fontSize: 10, color: 'var(--text-light)', borderTop: '1px solid var(--border)', paddingTop: 10, lineHeight: 1.5 }}>
-          💡 Coverage shown for your weekly basket based on your plan type. 90%+ is excellent.
+  const fmt = (v, dec = 0) => v != null ? +v.toFixed(dec) : null
+
+  const PlanBadgeColor = planPct >= 50 ? '#1B5E20' : planPct >= 40 ? '#2D6A35' : '#558B2F'
+
+  function NutrientCard({ k, fullWidth }) {
+    const cfg      = NUTRIENT_CONFIG.find(n => n.key === k)
+    if (!cfg) return null
+    const rawPct   = parseFloat(coverage[k] || 0)
+    const barW     = Math.min(rawPct, 100)
+    const clr      = coverageColor(rawPct)
+    const fullTgt  = fmt(fullTargets[k],  k === 'calories' ? 0 : 1)
+    const planTgt  = fmt(planTargets[k],  k === 'calories' ? 0 : 1)
+    const ach      = fmt(achieved[k],     k === 'calories' ? 0 : 1)
+
+    return (
+      <div style={{
+        background: '#FAFAFA', borderRadius: 12, padding: '12px 14px',
+        border: '1px solid var(--border)',
+        gridColumn: fullWidth ? '1 / -1' : undefined,
+      }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: fullWidth ? 18 : 15 }}>{cfg.icon}</span>
+            <span style={{ fontSize: fullWidth ? 14 : 12.5, fontWeight: 700, color: 'var(--text)' }}>{cfg.label}</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 800, color: clr }}>
+            {rawPct.toFixed(0)}%
+          </span>
         </div>
+
+        {/* Progress bar */}
+        <div style={{ height: fullWidth ? 10 : 8, background: '#E8EDF0', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
+          <div style={{
+            height: '100%', borderRadius: 99,
+            width: `${barW}%`,
+            background: rawPct >= 90
+              ? `linear-gradient(90deg, ${clr}, ${clr}AA)`
+              : rawPct >= 70
+              ? 'linear-gradient(90deg, #F9A825, #FFD54F)'
+              : 'linear-gradient(90deg, #E53935, #EF9A9A)',
+            transition: 'width 0.6s ease',
+          }} />
+        </div>
+
+        {/* Three-line data */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+            <span style={{ color: 'var(--text-light)' }}>Weekly need</span>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{fullTgt ?? '–'} {cfg.unit}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+            <span style={{ color: 'var(--text-light)' }}>Plan target ({planPct}%)</span>
+            <span style={{ fontWeight: 600, color: PlanBadgeColor }}>{planTgt ?? '–'} {cfg.unit}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+            <span style={{ color: 'var(--text-light)' }}>Basket achieves</span>
+            <span style={{ fontWeight: 700, color: clr }}>{ach ?? '–'} {cfg.unit}</span>
+          </div>
+        </div>
+
+        {rawPct > 100 && (
+          <div style={{ fontSize: 10, color: '#558B2F', marginTop: 4, fontWeight: 600 }}>✓ Exceeds plan target</div>
+        )}
+      </div>
+    )
+  }
+
+  // Split: calories full width, rest in pairs
+  const [first, ...rest] = keys
+
+  return (
+    <div style={{ padding: '14px 16px 4px' }}>
+      {/* Plan banner */}
+      <div style={{
+        background: `linear-gradient(135deg, ${PlanBadgeColor}15, ${PlanBadgeColor}08)`,
+        border: `1.5px solid ${PlanBadgeColor}40`,
+        borderRadius: 14, padding: '12px 16px', marginBottom: 14,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: PlanBadgeColor }}>{planName}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 2 }}>
+            Covers <b>{planPct}%</b> of your weekly nutrition target
+            {goals.length > 0 && <span> · {goals[0]}</span>}
+          </div>
+        </div>
+        {tdee > 0 && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-light)' }}>Daily need</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{Math.round(tdee)} kcal</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 15, fontWeight: 600, marginBottom: 10 }}>
+        Nutritional Coverage
+      </div>
+
+      {/* Calories — full width */}
+      <div style={{ marginBottom: 10 }}>
+        <NutrientCard k={first} fullWidth />
+      </div>
+
+      {/* Rest — 2 per row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+        {rest.map(k => <NutrientCard key={k} k={k} />)}
+      </div>
+
+      <div style={{ fontSize: 10, color: 'var(--text-light)', lineHeight: 1.5, padding: '8px 4px' }}>
+        💡 <b>Weekly need</b> = your full 7-day nutritional requirement. <b>Plan target</b> = what this plan aims to provide. <b>Basket achieves</b> = actual nutrition in your basket. 90%+ of plan target is excellent.
       </div>
     </div>
   )

@@ -199,9 +199,9 @@ export default function Setup() {
   const [bmiRules,        setBmiRules]       = useState([])
   const [wellnessGoals,   setWellnessGoals]  = useState([])
   const [planTypes,       setPlanTypes]      = useState([
-    { planCode: 'T20', planName: 'Basic Plan',    coveragePct: 30, description: 'Covers 30% of your weekly nutritional targets — light supplementation' },
-    { planCode: 'T30', planName: 'Standard Plan', coveragePct: 40, description: 'Covers 40% of your weekly nutritional targets — balanced coverage' },
-    { planCode: 'T40', planName: 'Premium Plan',  coveragePct: 50, description: 'Covers 50% of your weekly nutritional targets — comprehensive nutrition' },
+    { planCode: 'T20', planName: 'LIV Care',    coveragePct: 30, description: 'Covers 30% of your weekly nutritional targets — light supplementation' },
+    { planCode: 'T30', planName: 'LIV Balance', coveragePct: 40, description: 'Covers 40% of your weekly nutritional targets — balanced coverage' },
+    { planCode: 'T40', planName: 'LIV Premium', coveragePct: 50, description: 'Covers 50% of your weekly nutritional targets — comprehensive nutrition' },
   ])
   const [subPlans,        setSubPlans]       = useState([
     { id:'weekly',    planName:'Weekly Plan',        days:7,  freq:'Every 7 days',    icon:'🌱', desc:'Fresh basket delivered every week' },
